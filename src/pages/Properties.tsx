@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Plus, Link2, ExternalLink } from 'lucide-react';
 import { mockProperties, mockListings } from '@/lib/mockData';
 
@@ -38,10 +40,59 @@ export default function Properties() {
             <h1 className="text-3xl font-bold text-foreground">Properties</h1>
             <p className="text-muted-foreground">Manage your rental properties</p>
           </div>
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Property
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Property
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Add New Property</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="property-name">Property Name</Label>
+                  <Input id="property-name" placeholder="Enter property name" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="property-address">Address</Label>
+                  <Input id="property-address" placeholder="Enter property address" />
+                </div>
+                <div className="space-y-3">
+                  <Label>Platform Listing IDs</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Enter the unique listing ID for each platform to link them to this property
+                  </p>
+                  <div className="grid gap-3">
+                    <div className="flex items-center gap-3">
+                      <Label htmlFor="airbnb-id" className="w-32 text-right">Airbnb</Label>
+                      <Input id="airbnb-id" placeholder="Airbnb listing ID" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Label htmlFor="vrbo-id" className="w-32 text-right">Vrbo</Label>
+                      <Input id="vrbo-id" placeholder="Vrbo listing ID" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Label htmlFor="booking-id" className="w-32 text-right">Booking.com</Label>
+                      <Input id="booking-id" placeholder="Booking.com listing ID" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Label htmlFor="direct-id" className="w-32 text-right">Direct Website</Label>
+                      <Input id="direct-id" placeholder="Direct booking ID" />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                  <DialogTrigger asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </DialogTrigger>
+                  <Button>Create Property</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Properties Grid */}
