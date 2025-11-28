@@ -2,7 +2,8 @@
 
 import type { 
   Property, Listing, Task, Booking, Message, Conversation, 
-  Crew, KPI, Alert, AutomationRule, ExecutionLog 
+  Crew, KPI, Alert, AutomationRule, ExecutionLog, Service, LocationStats,
+  CrewFolder, CrewMember, CalendarEvent, EventCategoryConfig
 } from '@/types';
 
 export const mockProperties: Property[] = [
@@ -210,32 +211,32 @@ export const mockCrews: Crew[] = [
 
 export const mockKPIs: KPI[] = [
   {
-    label: 'Occupancy Rate',
-    value: '87%',
-    change: 5,
+    label: 'Total Revenue',
+    value: '$128,450',
+    change: 18,
     changeLabel: 'vs last month',
     trend: 'up',
   },
   {
-    label: 'Revenue (MTD)',
-    value: '$45,320',
+    label: 'Property Revenue',
+    value: '$89,320',
     change: 12,
     changeLabel: 'vs last month',
     trend: 'up',
   },
   {
-    label: 'Avg Nightly Rate',
-    value: '$285',
-    change: -3,
+    label: 'Services Revenue',
+    value: '$39,130',
+    change: 28,
     changeLabel: 'vs last month',
-    trend: 'down',
+    trend: 'up',
   },
   {
     label: 'Active Bookings',
     value: 23,
-    change: 0,
+    change: 3,
     changeLabel: 'this week',
-    trend: 'neutral',
+    trend: 'up',
   },
 ];
 
@@ -310,4 +311,190 @@ export const mockExecutionLogs: ExecutionLog[] = [
     affectedBookingId: 'book-2',
     details: 'Email service unavailable',
   },
+];
+
+export const mockServices: Service[] = [
+  {
+    id: 'srv-1',
+    type: 'Private Chef',
+    bookingId: 'book-1',
+    propertyId: 'prop-1',
+    guestName: 'Sarah Johnson',
+    date: new Date('2025-01-29T19:00:00'),
+    price: 850,
+    status: 'Scheduled',
+  },
+  {
+    id: 'srv-2',
+    type: 'Massage',
+    bookingId: 'book-1',
+    propertyId: 'prop-1',
+    guestName: 'Sarah Johnson',
+    date: new Date('2025-01-30T15:00:00'),
+    price: 200,
+    status: 'Scheduled',
+  },
+  {
+    id: 'srv-3',
+    type: 'Bartender',
+    bookingId: 'book-3',
+    propertyId: 'prop-1',
+    guestName: 'Emily Rodriguez',
+    date: new Date('2025-02-11T18:00:00'),
+    price: 450,
+    status: 'Scheduled',
+  },
+  {
+    id: 'srv-4',
+    type: 'Transportation',
+    bookingId: 'book-2',
+    propertyId: 'prop-2',
+    guestName: 'Michael Chen',
+    date: new Date('2025-02-01T10:00:00'),
+    price: 150,
+    status: 'Completed',
+  },
+];
+
+export const mockLocationStats: LocationStats[] = [
+  { region: 'North America', bookings: 45, revenue: 67500, percentage: 42 },
+  { region: 'Europe', bookings: 32, revenue: 52000, percentage: 30 },
+  { region: 'Asia', bookings: 18, revenue: 28800, percentage: 17 },
+  { region: 'South America', bookings: 8, revenue: 12800, percentage: 7 },
+  { region: 'Other', bookings: 4, revenue: 6400, percentage: 4 },
+];
+
+export const mockCrewFolders: CrewFolder[] = [
+  {
+    id: 'folder-1',
+    name: 'Property Services',
+    parentId: null,
+    order: 0,
+    members: [],
+  },
+  {
+    id: 'folder-1-1',
+    name: 'Cleaning Teams',
+    parentId: 'folder-1',
+    order: 0,
+    members: [
+      {
+        id: 'member-1',
+        name: 'Premium Clean Co.',
+        role: 'Lead Cleaning',
+        order: 0,
+        contactInfo: { email: 'contact@premiumclean.com', phone: '+1-555-1000' },
+      },
+      {
+        id: 'member-2',
+        name: 'Express Cleaners',
+        role: 'Backup Cleaning',
+        order: 1,
+        contactInfo: { email: 'info@expressclean.com', phone: '+1-555-1001' },
+      },
+    ],
+  },
+  {
+    id: 'folder-1-2',
+    name: 'Maintenance',
+    parentId: 'folder-1',
+    order: 1,
+    members: [
+      {
+        id: 'member-3',
+        name: 'Fix-It Pros',
+        role: 'General Maintenance',
+        order: 0,
+        contactInfo: { email: 'service@fixitpros.com', phone: '+1-555-3000' },
+      },
+    ],
+  },
+  {
+    id: 'folder-2',
+    name: 'Luxury Services',
+    parentId: null,
+    order: 1,
+    members: [],
+  },
+  {
+    id: 'folder-2-1',
+    name: 'Culinary',
+    parentId: 'folder-2',
+    order: 0,
+    members: [
+      {
+        id: 'member-4',
+        name: 'Chef Michael Laurent',
+        role: 'Private Chef',
+        order: 0,
+        contactInfo: { email: 'chef@laurent.com', phone: '+1-555-4000' },
+      },
+      {
+        id: 'member-5',
+        name: 'Mixology Masters',
+        role: 'Bartender Service',
+        order: 1,
+        contactInfo: { email: 'events@mixology.com', phone: '+1-555-4001' },
+      },
+    ],
+  },
+  {
+    id: 'folder-2-2',
+    name: 'Wellness',
+    parentId: 'folder-2',
+    order: 1,
+    members: [
+      {
+        id: 'member-6',
+        name: 'Serenity Spa',
+        role: 'Massage Therapy',
+        order: 0,
+        contactInfo: { email: 'booking@serenityspa.com', phone: '+1-555-5000' },
+      },
+    ],
+  },
+  {
+    id: 'folder-3',
+    name: 'Guest Support',
+    parentId: null,
+    order: 2,
+    members: [
+      {
+        id: 'member-7',
+        name: 'Concierge Team',
+        role: 'Guest Relations',
+        order: 0,
+        contactInfo: { email: 'concierge@luxury.com', phone: '+1-555-6000' },
+      },
+    ],
+  },
+];
+
+export const mockCalendarEvents: CalendarEvent[] = [
+  ...mockBookings.map(b => ({
+    id: `event-booking-${b.id}`,
+    title: `${b.guestName} - ${b.propertyName}`,
+    category: 'Reservation' as const,
+    propertyId: b.propertyId,
+    startDate: b.checkIn,
+    endDate: b.checkOut,
+    description: `${b.nights} nights, ${b.guests} guests`,
+  })),
+  {
+    id: 'event-maint-1',
+    title: 'HVAC Inspection',
+    category: 'Maintenance',
+    propertyId: 'prop-2',
+    startDate: new Date('2025-02-08'),
+    endDate: new Date('2025-02-08'),
+    description: 'Annual HVAC system check',
+  },
+];
+
+export const defaultEventCategories: EventCategoryConfig[] = [
+  { category: 'Reservation', color: 'hsl(142, 76%, 36%)', label: 'Reservation' },
+  { category: 'Maintenance', color: 'hsl(24, 95%, 53%)', label: 'Maintenance' },
+  { category: 'Service', color: 'hsl(262, 83%, 58%)', label: 'Service' },
+  { category: 'Blocked', color: 'hsl(0, 0%, 45%)', label: 'Blocked' },
+  { category: 'Personal', color: 'hsl(199, 89%, 48%)', label: 'Personal' },
 ];

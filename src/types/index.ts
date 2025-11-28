@@ -10,6 +10,8 @@ export type SyncStatus = 'Synced' | 'Error' | 'Pending';
 export type InternalStatus = 'Active' | 'Inactive' | 'Maintenance';
 export type TriggerEvent = 'NewBooking' | 'CheckOut' | 'MessageReceived' | 'GuestCheckIn';
 export type RuleAction = 'SendMessage' | 'CreateTask' | 'NotifyCrew' | 'SendEmail';
+export type ServiceType = 'Private Chef' | 'Bartender' | 'Massage' | 'Concierge' | 'Transportation' | 'Photography';
+export type EventCategory = 'Reservation' | 'Maintenance' | 'Service' | 'Blocked' | 'Personal';
 
 export interface Property {
   id: string;
@@ -137,4 +139,58 @@ export interface ExecutionLog {
   outcome: 'Success' | 'Failed' | 'Skipped';
   affectedBookingId?: string;
   details: string;
+}
+
+export interface Service {
+  id: string;
+  type: ServiceType;
+  bookingId: string;
+  propertyId: string;
+  guestName: string;
+  date: Date;
+  price: number;
+  status: 'Scheduled' | 'Completed' | 'Cancelled';
+}
+
+export interface LocationStats {
+  region: string;
+  bookings: number;
+  revenue: number;
+  percentage: number;
+}
+
+export interface CrewFolder {
+  id: string;
+  name: string;
+  parentId: string | null;
+  order: number;
+  members: CrewMember[];
+}
+
+export interface CrewMember {
+  id: string;
+  name: string;
+  role: string;
+  order: number;
+  contactInfo: {
+    email: string;
+    phone: string;
+  };
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  category: EventCategory;
+  propertyId: string;
+  startDate: Date;
+  endDate: Date;
+  description?: string;
+  color?: string;
+}
+
+export interface EventCategoryConfig {
+  category: EventCategory;
+  color: string;
+  label: string;
 }

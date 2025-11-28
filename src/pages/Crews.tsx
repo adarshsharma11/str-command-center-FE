@@ -1,144 +1,183 @@
+import { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { mockTasks, mockCrews } from '@/lib/mockData';
-import { Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { mockCrewFolders } from '@/lib/mockData';
+import { ChevronRight, ChevronDown, Plus, GripVertical, FolderOpen, Folder, User } from 'lucide-react';
+import type { CrewFolder } from '@/types';
 
 export default function Crews() {
   // TODO: INTEGRATION STUB: Replace with Supabase query
-  const tasks = mockTasks;
-  const crews = mockCrews;
+  const [folders, setFolders] = useState<CrewFolder[]>(mockCrewFolders);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['folder-1', 'folder-2']));
 
-  // Group tasks by priority
-  const tasksByPriority = {
-    P1: tasks.filter(t => t.priority === 'P1'),
-    P2: tasks.filter(t => t.priority === 'P2'),
-    P3: tasks.filter(t => t.priority === 'P3'),
-    P4: tasks.filter(t => t.priority === 'P4'),
+  const toggleFolder = (folderId: string) => {
+    setExpandedFolders(prev => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
   };
 
-  const priorityColors = {
-    P1: 'bg-destructive text-destructive-foreground',
-    P2: 'bg-orange-500 text-white',
-    P3: 'bg-yellow-500 text-white',
-    P4: 'bg-muted text-muted-foreground',
+  const getFolderChildren = (parentId: string | null) => {
+    return folders
+      .filter(f => f.parentId === parentId)
+      .sort((a, b) => a.order - b.order);
   };
 
-  const priorityLabels = {
-    P1: 'Critical',
-    P2: 'Urgent',
-    P3: 'Routine',
-    P4: 'Backlog',
+  const renderFolder = (folder: CrewFolder, depth: number = 0) => {
+    const children = getFolderChildren(folder.id);
+    const isExpanded = expandedFolders.has(folder.id);
+    const hasChildren = children.length > 0 || folder.members.length > 0;
+
+    return (
+      <div key={folder.id} className="space-y-1">
+        <div
+          className="flex items-center gap-2 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group"
+          style={{ paddingLeft: `${depth * 1.5 + 0.75}rem` }}
+          onClick={() => hasChildren && toggleFolder(folder.id)}
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          
+          {hasChildren ? (
+            isExpanded ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )
+          ) : (
+            <div className="w-4" />
+          )}
+
+          {isExpanded ? (
+            <FolderOpen className="h-4 w-4 text-primary" />
+          ) : (
+            <Folder className="h-4 w-4 text-muted-foreground" />
+          )}
+
+          <span className="font-medium text-foreground">{folder.name}</span>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 ml-auto opacity-0 group-hover:opacity-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              // TODO: Add subfolder
+            }}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+        </div>
+
+        {isExpanded && (
+          <div className="space-y-1">
+            {folder.members.length > 0 && (
+              <div className="space-y-1">
+                {folder.members.sort((a, b) => a.order - b.order).map((member, index) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-2 p-3 rounded-lg hover:bg-muted/30 cursor-move transition-colors group"
+                    style={{ paddingLeft: `${(depth + 1) * 1.5 + 0.75}rem` }}
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                      {index + 1}
+                    </div>
+
+                    <User className="h-4 w-4 text-muted-foreground" />
+
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground text-sm">{member.name}</p>
+                      <p className="text-xs text-muted-foreground">{member.role}</p>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground hidden md:block">
+                      {member.contactInfo.phone}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {children.map(childFolder => renderFolder(childFolder, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
   };
+
+  const rootFolders = getFolderChildren(null);
 
   return (
     <Layout>
       <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Crews & Vendors</h1>
-          <p className="text-muted-foreground">Manage tasks and crew assignments</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Crew Management</h1>
+            <p className="text-muted-foreground">Organize your service providers in priority order</p>
+          </div>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Category
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Category</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Category Name</Label>
+                  <Input placeholder="e.g., Transportation Services" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Parent Category (Optional)</Label>
+                  <Input placeholder="Leave empty for root level" />
+                </div>
+                <Button className="w-full">Create Category</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {/* Crew List */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {crews.map((crew) => (
-            <Card key={crew.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="h-4 w-4" />
-                  {crew.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="text-sm">
-                  <p className="text-muted-foreground">Email: {crew.email}</p>
-                  <p className="text-muted-foreground">Phone: {crew.phone}</p>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {crew.specialties.map((spec) => (
-                    <Badge key={spec} variant="secondary" className="text-xs">
-                      {spec}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex justify-between text-sm pt-2 border-t border-border">
-                  <span className="text-muted-foreground">Assigned: {crew.tasksAssigned}</span>
-                  <span className="text-green-600">Completed: {crew.tasksCompleted}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Task Queue by Priority */}
         <Card>
           <CardHeader>
-            <CardTitle>Task Queue</CardTitle>
+            <CardTitle>Service Provider Hierarchy</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Drag to reorder priority. Top members are contacted first for validation.
+            </p>
           </CardHeader>
           <CardContent>
-            <Accordion type="multiple" defaultValue={['P1', 'P2']} className="w-full">
-              {(Object.keys(tasksByPriority) as Array<keyof typeof tasksByPriority>).map((priority) => (
-                <AccordionItem key={priority} value={priority}>
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex items-center gap-3">
-                      <Badge className={priorityColors[priority]}>
-                        {priority}
-                      </Badge>
-                      <span className="font-semibold">{priorityLabels[priority]}</span>
-                      <span className="text-sm text-muted-foreground">
-                        ({tasksByPriority[priority].length} tasks)
-                      </span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-3 pt-2">
-                      {tasksByPriority[priority].map((task) => (
-                        <div
-                          key={task.id}
-                          className="p-4 rounded-lg border border-border bg-card hover:shadow-md transition-shadow cursor-move"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-foreground mb-1">{task.title}</h4>
-                              <p className="text-sm text-muted-foreground mb-2">{task.description}</p>
-                              <div className="flex gap-2 flex-wrap">
-                                <Badge variant="outline">{task.type}</Badge>
-                                <Badge variant="secondary">{task.status}</Badge>
-                                {task.assignedCrewName && (
-                                  <Badge variant="default">{task.assignedCrewName}</Badge>
-                                )}
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-2">
-                                Due: {task.dueDate.toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                          {task.completionLog && (
-                            <div className="mt-3 pt-3 border-t border-border">
-                              <p className="text-xs text-muted-foreground">
-                                Completed by {task.completionLog.completedBy} on{' '}
-                                {task.completionLog.completedAt.toLocaleString()}
-                              </p>
-                              {task.completionLog.notes && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Notes: {task.completionLog.notes}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {tasksByPriority[priority].length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          No tasks in this priority level
-                        </p>
-                      )}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+            <div className="space-y-1">
+              {rootFolders.map(folder => renderFolder(folder))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+              <div className="text-primary">ℹ️</div>
+              <div className="flex-1 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Priority Order System</p>
+                <p>
+                  When AI validates visitor access, it contacts crew members in the order shown above.
+                  Drag members up or down within their category to adjust priority. The system will
+                  contact the next person if the current one is unavailable.
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
