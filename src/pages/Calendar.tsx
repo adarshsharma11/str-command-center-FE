@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
 import { Layout } from '@/components/Layout';
 import { CalendarHeader } from '@/components/calendar/CalendarHeader';
 import { DayView } from '@/components/calendar/DayView';
@@ -6,6 +7,7 @@ import { WeekView } from '@/components/calendar/WeekView';
 import { MonthView } from '@/components/calendar/MonthView';
 import { YearView } from '@/components/calendar/YearView';
 import { CalendarSidePanel } from '@/components/calendar/CalendarSidePanel';
+import { EventCardList } from '@/components/calendar/EventCardList';
 import { 
   CalendarView, 
   CalendarBooking, 
@@ -24,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 
 export default function Calendar() {
@@ -35,14 +38,50 @@ export default function Calendar() {
   const [showAddEvent, setShowAddEvent] = useState(false);
 
   // TODO: integrate booking API
-  const bookings = selectedProperty === 'all' 
+  const allBookings = selectedProperty === 'all' 
     ? mockBookings 
     : mockBookings.filter(b => b.propertyId === selectedProperty);
 
   // TODO: fetch vendor-task assignments
-  const tasks = selectedProperty === 'all'
+  const allTasks = selectedProperty === 'all'
     ? mockVendorTasks
     : mockVendorTasks.filter(t => t.propertyId === selectedProperty);
+
+  // Get the date range for the current view
+  const getViewDateRange = useMemo(() => {
+    switch (currentView) {
+      case 'day':
+        return { start: startOfDay(currentDate), end: endOfDay(currentDate) };
+      case 'week':
+        return { start: startOfWeek(currentDate), end: endOfWeek(currentDate) };
+      case 'month':
+        return { start: startOfMonth(currentDate), end: endOfMonth(currentDate) };
+      case 'year':
+        return { start: startOfYear(currentDate), end: endOfYear(currentDate) };
+      default:
+        return { start: startOfMonth(currentDate), end: endOfMonth(currentDate) };
+    }
+  }, [currentDate, currentView]);
+
+  // Filter bookings and tasks for the current view
+  const bookings = useMemo(() => {
+    return allBookings.filter((booking) => {
+      const checkIn = new Date(booking.checkIn);
+      const checkOut = new Date(booking.checkOut);
+      return (
+        isWithinInterval(checkIn, getViewDateRange) ||
+        isWithinInterval(checkOut, getViewDateRange) ||
+        (checkIn <= getViewDateRange.start && checkOut >= getViewDateRange.end)
+      );
+    });
+  }, [allBookings, getViewDateRange]);
+
+  const tasks = useMemo(() => {
+    return allTasks.filter((task) => {
+      const taskDate = new Date(task.scheduledTime);
+      return isWithinInterval(taskDate, getViewDateRange);
+    });
+  }, [allTasks, getViewDateRange]);
 
   // TODO: pull from user settings / properties API
   const properties = [
@@ -83,25 +122,24 @@ export default function Calendar() {
 
   return (
     <Layout>
-      <div className="flex flex-col h-[calc(100vh-4rem)]">
-        {/* Header */}
-        <CalendarHeader
-          currentDate={currentDate}
-          currentView={currentView}
-          colorAssignments={colorAssignments}
-          selectedProperty={selectedProperty}
-          properties={properties}
-          onDateChange={setCurrentDate}
-          onViewChange={setCurrentView}
-          onColorAssignmentsChange={setColorAssignments}
-          onPropertyChange={setSelectedProperty}
-          onAddEvent={handleAddEvent}
-        />
+      <ScrollArea className="h-[calc(100vh-4rem)]">
+        <div className="flex flex-col">
+          {/* Header */}
+          <CalendarHeader
+            currentDate={currentDate}
+            currentView={currentView}
+            colorAssignments={colorAssignments}
+            selectedProperty={selectedProperty}
+            properties={properties}
+            onDateChange={setCurrentDate}
+            onViewChange={setCurrentView}
+            onColorAssignmentsChange={setColorAssignments}
+            onPropertyChange={setSelectedProperty}
+            onAddEvent={handleAddEvent}
+          />
 
-        {/* Main Content */}
-        <div className="flex flex-1 overflow-hidden">
           {/* Calendar View */}
-          <div className="flex-1 overflow-hidden bg-background">
+          <div className="bg-background min-h-[400px]">
             {currentView === 'day' && (
               <DayView
                 date={currentDate}
@@ -145,16 +183,27 @@ export default function Calendar() {
             )}
           </div>
 
-          {/* Side Panel */}
-          {selectedBooking && (
-            <CalendarSidePanel
-              booking={selectedBooking}
+          {/* Event Cards List */}
+          <div className="p-6 border-t border-border">
+            <EventCardList
+              bookings={bookings}
               tasks={tasks}
-              onClose={() => setSelectedBooking(null)}
+              colorAssignments={colorAssignments}
+              onBookingClick={handleBookingClick}
+              onTaskClick={handleTaskClick}
             />
-          )}
+          </div>
         </div>
-      </div>
+
+        {/* Side Panel */}
+        {selectedBooking && (
+          <CalendarSidePanel
+            booking={selectedBooking}
+            tasks={tasks}
+            onClose={() => setSelectedBooking(null)}
+          />
+        )}
+      </ScrollArea>
 
       {/* Add Event Dialog */}
       <Dialog open={showAddEvent} onOpenChange={setShowAddEvent}>
