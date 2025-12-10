@@ -1,0 +1,164 @@
+import { CalendarBooking, VendorTask, ColorAssignment } from './types';
+import { addDays, addHours, setHours, setMinutes, startOfDay } from 'date-fns';
+
+const today = startOfDay(new Date());
+
+// TODO: integrate booking API
+export const mockBookings: CalendarBooking[] = [
+  {
+    id: 'b1',
+    propertyId: 'p1',
+    propertyName: 'Oceanfront Villa',
+    guestName: 'Sarah Johnson',
+    checkIn: setHours(today, 15),
+    checkOut: setHours(addDays(today, 4), 11),
+    channel: 'airbnb',
+    status: 'confirmed',
+    guestNotes: 'Anniversary celebration, requested champagne',
+    guestCount: 2,
+  },
+  {
+    id: 'b2',
+    propertyId: 'p2',
+    propertyName: 'Mountain Retreat',
+    guestName: 'Michael Chen',
+    checkIn: setHours(addDays(today, 1), 16),
+    checkOut: setHours(addDays(today, 6), 10),
+    channel: 'vrbo',
+    status: 'confirmed',
+    guestNotes: 'Family with 2 kids, needs high chair',
+    guestCount: 4,
+  },
+  {
+    id: 'b3',
+    propertyId: 'p3',
+    propertyName: 'Downtown Penthouse',
+    guestName: 'Emma Williams',
+    checkIn: setHours(addDays(today, -2), 14),
+    checkOut: setHours(addDays(today, 1), 12),
+    channel: 'direct',
+    status: 'confirmed',
+    guestCount: 3,
+  },
+  {
+    id: 'b4',
+    propertyId: 'p1',
+    propertyName: 'Oceanfront Villa',
+    guestName: 'James Rodriguez',
+    checkIn: setHours(addDays(today, 5), 15),
+    checkOut: setHours(addDays(today, 9), 11),
+    channel: 'booking',
+    status: 'pending',
+    guestCount: 6,
+  },
+  {
+    id: 'b5',
+    propertyId: 'p4',
+    propertyName: 'Lakeside Cabin',
+    guestName: 'Owner Block',
+    checkIn: setHours(addDays(today, 3), 0),
+    checkOut: setHours(addDays(today, 5), 23),
+    channel: 'direct',
+    status: 'blocked',
+  },
+];
+
+// TODO: fetch vendor-task assignments
+export const mockVendorTasks: VendorTask[] = [
+  {
+    id: 't1',
+    bookingId: 'b1',
+    propertyId: 'p1',
+    type: 'cleaning',
+    vendorName: 'Maria Santos',
+    scheduledTime: setHours(today, 11),
+    duration: 180,
+    status: 'scheduled',
+  },
+  {
+    id: 't2',
+    bookingId: 'b1',
+    propertyId: 'p1',
+    type: 'chef',
+    vendorName: 'Chef Antoine',
+    scheduledTime: setHours(today, 19),
+    duration: 180,
+    status: 'scheduled',
+    notes: 'Anniversary dinner - 5 course meal',
+  },
+  {
+    id: 't3',
+    bookingId: 'b2',
+    propertyId: 'p2',
+    type: 'cleaning',
+    vendorName: 'Carlos Rodriguez',
+    scheduledTime: setHours(addDays(today, 1), 10),
+    duration: 240,
+    status: 'scheduled',
+  },
+  {
+    id: 't4',
+    bookingId: 'b3',
+    propertyId: 'p3',
+    type: 'cleaning',
+    vendorName: 'Maria Santos',
+    scheduledTime: setHours(addDays(today, 1), 13),
+    duration: 120,
+    status: 'scheduled',
+  },
+  {
+    id: 't5',
+    bookingId: 'b1',
+    propertyId: 'p1',
+    type: 'bartender',
+    vendorName: 'Jake Miller',
+    scheduledTime: setHours(addDays(today, 2), 18),
+    duration: 240,
+    status: 'scheduled',
+  },
+  {
+    id: 't6',
+    propertyId: 'p2',
+    type: 'handyman',
+    vendorName: 'Bob Wilson',
+    scheduledTime: setHours(addDays(today, 1), 9),
+    duration: 60,
+    status: 'scheduled',
+    notes: 'Fix deck railing',
+  },
+  {
+    id: 't7',
+    bookingId: 'b2',
+    propertyId: 'p2',
+    type: 'massage',
+    vendorName: 'Lisa Chen',
+    scheduledTime: setHours(addDays(today, 3), 14),
+    duration: 90,
+    status: 'scheduled',
+  },
+];
+
+// TODO: pull from user settings
+export const mockColorAssignments: ColorAssignment[] = [
+  { id: 'c1', category: 'property', name: 'Oceanfront Villa', color: '#3B82F6' },
+  { id: 'c2', category: 'property', name: 'Mountain Retreat', color: '#10B981' },
+  { id: 'c3', category: 'property', name: 'Downtown Penthouse', color: '#F59E0B' },
+  { id: 'c4', category: 'property', name: 'Lakeside Cabin', color: '#8B5CF6' },
+];
+
+// Monthly occupancy data for year view
+// TODO: integrate analytics API
+export const mockOccupancyData: Record<string, number> = {
+  '2025-01': 72,
+  '2025-02': 85,
+  '2025-03': 78,
+  '2025-04': 65,
+  '2025-05': 88,
+  '2025-06': 95,
+  '2025-07': 98,
+  '2025-08': 96,
+  '2025-09': 82,
+  '2025-10': 70,
+  '2025-11': 68,
+  '2025-12': 90,
+};

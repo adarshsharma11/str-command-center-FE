@@ -1,191 +1,231 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Layout } from '@/components/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CalendarHeader } from '@/components/calendar/CalendarHeader';
+import { DayView } from '@/components/calendar/DayView';
+import { WeekView } from '@/components/calendar/WeekView';
+import { MonthView } from '@/components/calendar/MonthView';
+import { YearView } from '@/components/calendar/YearView';
+import { CalendarSidePanel } from '@/components/calendar/CalendarSidePanel';
+import { 
+  CalendarView, 
+  CalendarBooking, 
+  VendorTask, 
+  ColorAssignment 
+} from '@/components/calendar/types';
+import { 
+  mockBookings, 
+  mockVendorTasks, 
+  mockColorAssignments,
+  mockOccupancyData,
+} from '@/components/calendar/mockCalendarData';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ChevronLeft, ChevronRight, Plus, Settings } from 'lucide-react';
-import { mockCalendarEvents, mockProperties, defaultEventCategories } from '@/lib/mockData';
-import type { EventCategory, EventCategoryConfig } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 
 export default function Calendar() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState<CalendarView>('month');
   const [selectedProperty, setSelectedProperty] = useState<string>('all');
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [categoryColors, setCategoryColors] = useState<EventCategoryConfig[]>(defaultEventCategories);
-  const [showColorSettings, setShowColorSettings] = useState(false);
+  const [colorAssignments, setColorAssignments] = useState<ColorAssignment[]>(mockColorAssignments);
+  const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null);
+  const [showAddEvent, setShowAddEvent] = useState(false);
 
-  // TODO: INTEGRATION STUB: Replace with Supabase query
-  const events = mockCalendarEvents.filter(e => {
-    const matchesProperty = selectedProperty === 'all' || e.propertyId === selectedProperty;
-    return matchesProperty;
-  });
+  // TODO: integrate booking API
+  const bookings = selectedProperty === 'all' 
+    ? mockBookings 
+    : mockBookings.filter(b => b.propertyId === selectedProperty);
 
-  const getCategoryConfig = (category: EventCategory) => {
-    return categoryColors.find(c => c.category === category) || defaultEventCategories[0];
+  // TODO: fetch vendor-task assignments
+  const tasks = selectedProperty === 'all'
+    ? mockVendorTasks
+    : mockVendorTasks.filter(t => t.propertyId === selectedProperty);
+
+  // TODO: pull from user settings / properties API
+  const properties = [
+    { id: 'p1', name: 'Oceanfront Villa' },
+    { id: 'p2', name: 'Mountain Retreat' },
+    { id: 'p3', name: 'Downtown Penthouse' },
+    { id: 'p4', name: 'Lakeside Cabin' },
+  ];
+
+  const handleBookingClick = useCallback((booking: CalendarBooking) => {
+    setSelectedBooking(booking);
+  }, []);
+
+  const handleTaskClick = useCallback((task: VendorTask) => {
+    // TODO: implement task detail panel
+    toast.info(`Task: ${task.vendorName} - ${task.type}`);
+  }, []);
+
+  const handleDayClick = useCallback((date: Date) => {
+    setCurrentDate(date);
+    setCurrentView('day');
+  }, []);
+
+  const handleMonthClick = useCallback((date: Date) => {
+    setCurrentDate(date);
+    setCurrentView('month');
+  }, []);
+
+  const handleAddEvent = () => {
+    setShowAddEvent(true);
   };
 
-  const updateCategoryColor = (category: EventCategory, color: string) => {
-    setCategoryColors(prev => 
-      prev.map(c => c.category === category ? { ...c, color } : c)
-    );
+  const handleSaveEvent = () => {
+    // TODO: integrate event creation API
+    toast.success('Event created successfully');
+    setShowAddEvent(false);
   };
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Calendar</h1>
-            <p className="text-muted-foreground">View and manage all events</p>
+      <div className="flex flex-col h-[calc(100vh-4rem)]">
+        {/* Header */}
+        <CalendarHeader
+          currentDate={currentDate}
+          currentView={currentView}
+          colorAssignments={colorAssignments}
+          selectedProperty={selectedProperty}
+          properties={properties}
+          onDateChange={setCurrentDate}
+          onViewChange={setCurrentView}
+          onColorAssignmentsChange={setColorAssignments}
+          onPropertyChange={setSelectedProperty}
+          onAddEvent={handleAddEvent}
+        />
+
+        {/* Main Content */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Calendar View */}
+          <div className="flex-1 overflow-hidden bg-background">
+            {currentView === 'day' && (
+              <DayView
+                date={currentDate}
+                bookings={bookings}
+                tasks={tasks}
+                colorAssignments={colorAssignments}
+                onBookingClick={handleBookingClick}
+                onTaskClick={handleTaskClick}
+              />
+            )}
+
+            {currentView === 'week' && (
+              <WeekView
+                date={currentDate}
+                bookings={bookings}
+                tasks={tasks}
+                colorAssignments={colorAssignments}
+                onBookingClick={handleBookingClick}
+                onTaskClick={handleTaskClick}
+              />
+            )}
+
+            {currentView === 'month' && (
+              <MonthView
+                date={currentDate}
+                bookings={bookings}
+                colorAssignments={colorAssignments}
+                colorBy="property"
+                onBookingClick={handleBookingClick}
+                onDayClick={handleDayClick}
+              />
+            )}
+
+            {currentView === 'year' && (
+              <YearView
+                date={currentDate}
+                bookings={bookings}
+                occupancyData={mockOccupancyData}
+                onMonthClick={handleMonthClick}
+              />
+            )}
           </div>
-          <div className="flex gap-2">
-            <Dialog open={showColorSettings} onOpenChange={setShowColorSettings}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  Category Colors
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Customize Category Colors</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  {categoryColors.map((config) => (
-                    <div key={config.category} className="space-y-2">
-                      <Label>{config.label}</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          type="color"
-                          value={config.color}
-                          onChange={(e) => updateCategoryColor(config.category, e.target.value)}
-                          className="w-20 h-10"
-                        />
-                        <Input
-                          value={config.color}
-                          onChange={(e) => updateCategoryColor(config.category, e.target.value)}
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </DialogContent>
-            </Dialog>
-            
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Event
-            </Button>
-          </div>
+
+          {/* Side Panel */}
+          {selectedBooking && (
+            <CalendarSidePanel
+              booking={selectedBooking}
+              tasks={tasks}
+              onClose={() => setSelectedBooking(null)}
+            />
+          )}
         </div>
-
-        {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <Select value={selectedProperty} onValueChange={setSelectedProperty}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Properties" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Properties</SelectItem>
-                    {mockProperties.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Calendar Header */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>
-                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </CardTitle>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Events List View */}
-            <div className="space-y-3">
-              {events.map((event) => {
-                const config = getCategoryConfig(event.category);
-                return (
-                  <div
-                    key={event.id}
-                    className="p-4 rounded-lg bg-card border border-border hover:shadow-md transition-shadow"
-                    style={{ borderLeftWidth: '4px', borderLeftColor: config.color }}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge 
-                            variant="secondary"
-                            style={{ backgroundColor: `${config.color}20`, color: config.color }}
-                          >
-                            {config.label}
-                          </Badge>
-                        </div>
-                        <h3 className="font-semibold text-foreground">{event.title}</h3>
-                        {event.description && (
-                          <p className="text-sm text-muted-foreground">{event.description}</p>
-                        )}
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {event.startDate.toLocaleDateString()} 
-                          {event.startDate.toDateString() !== event.endDate.toDateString() && 
-                            ` → ${event.endDate.toLocaleDateString()}`
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Legend */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-4">
-              {categoryColors.map((config) => (
-                <div key={config.category} className="flex items-center gap-2">
-                  <div 
-                    className="w-4 h-4 rounded" 
-                    style={{ backgroundColor: config.color }}
-                  />
-                  <span className="text-sm text-muted-foreground">{config.label}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {/* Add Event Dialog */}
+      <Dialog open={showAddEvent} onOpenChange={setShowAddEvent}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Event</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Event Type</Label>
+              <Select defaultValue="booking">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="booking">Booking</SelectItem>
+                  <SelectItem value="block">Block</SelectItem>
+                  <SelectItem value="task">Vendor Task</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Property</Label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select property" />
+                </SelectTrigger>
+                <SelectContent>
+                  {properties.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Input type="date" />
+              </div>
+              <div className="space-y-2">
+                <Label>End Date</Label>
+                <Input type="date" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Guest Name (optional)</Label>
+              <Input placeholder="Guest name" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea placeholder="Add any notes..." />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setShowAddEvent(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEvent}>
+                Save Event
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
