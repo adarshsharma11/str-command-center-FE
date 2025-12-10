@@ -51,7 +51,7 @@ export function Layout({
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-card border-r border-border">
         <div className="flex items-center h-16 px-6 border-b border-border">
-          <h1 className="text-xl font-bold text-primary">Effi's Master CRM</h1>
+          <h1 className="text-xl font-bold text-primary">MOMA.HOUSE CRM</h1>
         </div>
         
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
