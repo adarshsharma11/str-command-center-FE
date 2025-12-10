@@ -1,162 +1,136 @@
 import { useState } from 'react';
 import { Layout } from '@/components/Layout';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Send, Sparkles } from 'lucide-react';
-import { mockConversations, mockBookings } from '@/lib/mockData';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ViewToggle } from '@/components/inbox/ViewToggle';
+import { ThreadList } from '@/components/inbox/ThreadList';
+import { FloatingChatBubble, FloatingChatIcon } from '@/components/inbox/FloatingChatBubble';
+import { LabelManager } from '@/components/inbox/LabelManager';
+import { OutlookLayout } from '@/components/inbox/OutlookLayout';
+import { mockLabels, mockThreads } from '@/components/inbox/mockInboxData';
+import type { InboxViewType, InboxLabel, InboxThread } from '@/components/inbox/types';
 
 export default function Inbox() {
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
-  const [messageType, setMessageType] = useState<'guest' | 'vendor'>('guest');
+  const [viewType, setViewType] = useState<InboxViewType>('gmail');
+  const [labels, setLabels] = useState<InboxLabel[]>(mockLabels);
+  const [threads, setThreads] = useState<InboxThread[]>(mockThreads);
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
+  const [selectedThread, setSelectedThread] = useState<InboxThread | null>(null);
+  const [isChatMinimized, setIsChatMinimized] = useState(false);
 
-  // TODO: INTEGRATION STUB: Replace with Supabase query
-  const conversations = mockConversations;
-  const selectedBooking = selectedConversation
-    ? mockBookings.find(b => b.id === conversations.find(c => c.id === selectedConversation)?.bookingId)
-    : null;
+  const filteredThreads = selectedLabelId
+    ? threads.filter((t) => t.labels.includes(selectedLabelId))
+    : threads;
+
+  const handleStarToggle = (threadId: string) => {
+    setThreads((prev) => prev.map((t) => t.id === threadId ? { ...t, isStarred: !t.isStarred } : t));
+  };
+
+  const handleLabelCreate = (label: Omit<InboxLabel, 'id'>) => {
+    setLabels((prev) => [...prev, { ...label, id: `label-${Date.now()}` }]);
+  };
+
+  const handleLabelUpdate = (label: InboxLabel) => {
+    setLabels((prev) => prev.map((l) => l.id === label.id ? label : l));
+  };
+
+  const handleLabelDelete = (labelId: string) => {
+    setLabels((prev) => prev.filter((l) => l.id !== labelId));
+    setThreads((prev) => prev.map((t) => ({ ...t, labels: t.labels.filter((l) => l !== labelId) })));
+    if (selectedLabelId === labelId) setSelectedLabelId(null);
+  };
+
+  const handleLabelToggle = (threadId: string, labelId: string) => {
+    setThreads((prev) => prev.map((t) => {
+      if (t.id !== threadId) return t;
+      const hasLabel = t.labels.includes(labelId);
+      return { ...t, labels: hasLabel ? t.labels.filter((l) => l !== labelId) : [...t.labels, labelId] };
+    }));
+    if (selectedThread?.id === threadId) {
+      setSelectedThread((prev) => prev ? { ...prev, labels: prev.labels.includes(labelId) ? prev.labels.filter((l) => l !== labelId) : [...prev.labels, labelId] } : null);
+    }
+  };
+
+  const handleThreadClick = (thread: InboxThread) => {
+    setSelectedThread(thread);
+    setThreads((prev) => prev.map((t) => t.id === thread.id ? { ...t, isRead: true } : t));
+    setIsChatMinimized(false);
+  };
+
+  if (viewType === 'outlook') {
+    return (
+      <Layout>
+        <div className="h-[calc(100vh-4rem)] flex flex-col">
+          <div className="p-4 border-b border-border bg-card flex items-center justify-between">
+            <h1 className="text-xl font-bold">Inbox</h1>
+            <ViewToggle view={viewType} onViewChange={setViewType} />
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <OutlookLayout
+              threads={threads}
+              labels={labels}
+              selectedThread={selectedThread}
+              selectedLabelId={selectedLabelId}
+              onThreadSelect={handleThreadClick}
+              onStarToggle={handleStarToggle}
+              onLabelCreate={handleLabelCreate}
+              onLabelUpdate={handleLabelUpdate}
+              onLabelDelete={handleLabelDelete}
+              onLabelSelect={setSelectedLabelId}
+            />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-      <div className="flex flex-col h-[calc(100vh-4rem)] md:h-screen md:flex-row">
-        {/* Conversations Sidebar */}
-        <div className="w-full md:w-80 bg-card border-r border-border overflow-y-auto">
-          <div className="p-4 border-b border-border">
-            <h2 className="text-xl font-bold text-foreground">Inbox</h2>
-            <Tabs value={messageType} onValueChange={(v) => setMessageType(v as 'guest' | 'vendor')}>
-              <TabsList className="w-full mt-2">
-                <TabsTrigger value="guest" className="flex-1">Guests</TabsTrigger>
-                <TabsTrigger value="vendor" className="flex-1">Vendors</TabsTrigger>
-              </TabsList>
-            </Tabs>
+      <div className="flex h-[calc(100vh-4rem)]">
+        {/* Sidebar */}
+        <div className="w-56 bg-card border-r border-border hidden md:block">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <h2 className="font-semibold">Inbox</h2>
+            <ViewToggle view={viewType} onViewChange={setViewType} />
           </div>
-
-          <div className="divide-y divide-border">
-            {conversations.map((conv) => (
-              <div
-                key={conv.id}
-                className={`p-4 cursor-pointer hover:bg-accent transition-colors ${
-                  selectedConversation === conv.id ? 'bg-accent' : ''
-                }`}
-                onClick={() => setSelectedConversation(conv.id)}
-              >
-                <div className="flex items-start justify-between mb-1">
-                  <h3 className="font-semibold text-foreground">{conv.guestName}</h3>
-                  {conv.unreadCount > 0 && (
-                    <Badge variant="default" className="ml-2">
-                      {conv.unreadCount}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground truncate">{conv.lastMessage}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <Badge variant="outline" className="text-xs">
-                    {conv.platform}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {conv.timestamp.toLocaleTimeString()}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <LabelManager
+            labels={labels}
+            onLabelCreate={handleLabelCreate}
+            onLabelUpdate={handleLabelUpdate}
+            onLabelDelete={handleLabelDelete}
+            selectedLabelId={selectedLabelId}
+            onLabelSelect={setSelectedLabelId}
+          />
         </div>
 
-        {/* Message Thread and Guest Insights */}
-        <div className="flex-1 flex flex-col md:flex-row">
-          {selectedConversation ? (
-            <>
-              {/* Message Thread */}
-              <div className="flex-1 flex flex-col">
-                <div className="p-4 border-b border-border bg-card">
-                  <h2 className="font-semibold text-foreground">
-                    {conversations.find(c => c.id === selectedConversation)?.guestName}
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    {conversations.find(c => c.id === selectedConversation)?.platform}
-                  </p>
-                </div>
-
-                <div className="flex-1 p-4 overflow-y-auto bg-background">
-                  <p className="text-sm text-muted-foreground text-center">
-                    Message thread will display here
-                  </p>
-                </div>
-
-                <div className="p-4 border-t border-border bg-card">
-                  <div className="flex gap-2 mb-2">
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Sparkles className="h-4 w-4" />
-                      Smart Reply
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Template
-                    </Button>
-                  </div>
-                  <div className="flex gap-2">
-                    <Textarea
-                      placeholder="Type your message..."
-                      className="resize-none"
-                      rows={3}
-                    />
-                    <Button size="icon" className="shrink-0">
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Guest Insights Panel */}
-              <div className="w-full md:w-80 bg-card border-l border-border p-4 overflow-y-auto">
-                <h3 className="font-semibold text-foreground mb-4">Guest Insights</h3>
-                {selectedBooking && (
-                  <div className="space-y-4">
-                    <Card>
-                      <CardContent className="pt-6 space-y-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Property</p>
-                          <p className="text-sm font-medium">{selectedBooking.propertyName}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Check-in</p>
-                          <p className="text-sm font-medium">{selectedBooking.checkIn.toLocaleDateString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Check-out</p>
-                          <p className="text-sm font-medium">{selectedBooking.checkOut.toLocaleDateString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Guests</p>
-                          <p className="text-sm font-medium">{selectedBooking.guests}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Contact</p>
-                          <p className="text-sm font-medium">{selectedBooking.guestEmail}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="pt-6">
-                        <p className="text-xs text-muted-foreground mb-2">AI Summary</p>
-                        <p className="text-sm text-muted-foreground italic">
-                          First-time guest. Traveling with family. Requested early check-in.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-background">
-              <p className="text-muted-foreground">Select a conversation to view messages</p>
-            </div>
-          )}
+        {/* Thread List */}
+        <div className="flex-1 bg-background">
+          <div className="p-4 border-b border-border md:hidden flex items-center justify-between">
+            <h2 className="font-semibold">Inbox</h2>
+            <ViewToggle view={viewType} onViewChange={setViewType} />
+          </div>
+          <ScrollArea className="h-full">
+            <ThreadList
+              threads={filteredThreads}
+              labels={labels}
+              selectedThreadId={selectedThread?.id || null}
+              onThreadClick={handleThreadClick}
+              onStarToggle={handleStarToggle}
+            />
+          </ScrollArea>
         </div>
       </div>
+
+      {/* Floating Chat */}
+      {selectedThread && (
+        <FloatingChatBubble
+          thread={selectedThread}
+          labels={labels}
+          onClose={() => setSelectedThread(null)}
+          onLabelToggle={handleLabelToggle}
+          isMinimized={isChatMinimized}
+          onMinimizeToggle={() => setIsChatMinimized(!isChatMinimized)}
+        />
+      )}
     </Layout>
   );
 }

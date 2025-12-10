@@ -1,0 +1,133 @@
+import type { InboxLabel, InboxThread } from './types';
+
+export const mockLabels: InboxLabel[] = [
+  { id: 'label-1', name: 'Important', color: 'hsl(0, 84%, 60%)' },
+  { id: 'label-2', name: 'Follow Up', color: 'hsl(45, 93%, 47%)' },
+  { id: 'label-3', name: 'Booking', color: 'hsl(142, 76%, 36%)' },
+  { id: 'label-4', name: 'Support', color: 'hsl(199, 89%, 48%)' },
+  { id: 'label-5', name: 'Vendors', color: 'hsl(262, 83%, 58%)' },
+];
+
+export const mockThreads: InboxThread[] = [
+  {
+    id: 'thread-1',
+    senderName: 'Sarah Johnson',
+    senderAvatar: undefined,
+    subject: 'Question about early check-in',
+    snippet: 'Hi! I was wondering if we could possibly check in a bit earlier than 3pm? Our flight arrives at...',
+    labels: ['label-3', 'label-1'],
+    isStarred: true,
+    isRead: false,
+    timestamp: new Date('2025-01-27T16:30:00'),
+    messages: [
+      {
+        id: 'msg-1-1',
+        from: 'Sarah Johnson',
+        content: 'Hi! I was wondering if we could possibly check in a bit earlier than 3pm? Our flight arrives at 11am and we\'d love to drop off our bags if possible.',
+        timestamp: new Date('2025-01-27T14:00:00'),
+        isOutgoing: false,
+      },
+      {
+        id: 'msg-1-2',
+        from: 'You',
+        content: 'Hi Sarah! Thank you for reaching out. I\'ll check with our cleaning team and get back to you shortly.',
+        timestamp: new Date('2025-01-27T15:30:00'),
+        isOutgoing: true,
+      },
+      {
+        id: 'msg-1-3',
+        from: 'Sarah Johnson',
+        content: 'Thank you so much! We really appreciate your help.',
+        timestamp: new Date('2025-01-27T16:30:00'),
+        isOutgoing: false,
+      },
+    ],
+  },
+  {
+    id: 'thread-2',
+    senderName: 'Michael Chen',
+    senderAvatar: undefined,
+    subject: 'WiFi password not working',
+    snippet: 'The WiFi password in the welcome guide doesn\'t seem to be working. Could you please send the correct...',
+    labels: ['label-4'],
+    isStarred: false,
+    isRead: false,
+    timestamp: new Date('2025-01-27T14:15:00'),
+    messages: [
+      {
+        id: 'msg-2-1',
+        from: 'Michael Chen',
+        content: 'The WiFi password in the welcome guide doesn\'t seem to be working. Could you please send the correct one?',
+        timestamp: new Date('2025-01-27T14:15:00'),
+        isOutgoing: false,
+      },
+    ],
+  },
+  {
+    id: 'thread-3',
+    senderName: 'Premium Clean Co.',
+    senderAvatar: undefined,
+    subject: 'Re: Cleaning schedule update',
+    snippet: 'We\'ve confirmed the schedule for next week. All properties are covered as requested.',
+    labels: ['label-5'],
+    isStarred: false,
+    isRead: true,
+    timestamp: new Date('2025-01-27T10:00:00'),
+    messages: [
+      {
+        id: 'msg-3-1',
+        from: 'You',
+        content: 'Hi team, can you confirm the cleaning schedule for next week?',
+        timestamp: new Date('2025-01-26T16:00:00'),
+        isOutgoing: true,
+      },
+      {
+        id: 'msg-3-2',
+        from: 'Premium Clean Co.',
+        content: 'We\'ve confirmed the schedule for next week. All properties are covered as requested.',
+        timestamp: new Date('2025-01-27T10:00:00'),
+        isOutgoing: false,
+      },
+    ],
+  },
+  {
+    id: 'thread-4',
+    senderName: 'Emily Rodriguez',
+    senderAvatar: undefined,
+    subject: 'Reservation confirmation',
+    snippet: 'Thank you for confirming our reservation! We\'re so excited for our trip. Quick question about...',
+    labels: ['label-3'],
+    isStarred: true,
+    isRead: true,
+    timestamp: new Date('2025-01-26T18:45:00'),
+    messages: [
+      {
+        id: 'msg-4-1',
+        from: 'Emily Rodriguez',
+        content: 'Thank you for confirming our reservation! We\'re so excited for our trip. Quick question about parking - is there a dedicated spot for guests?',
+        timestamp: new Date('2025-01-26T18:45:00'),
+        isOutgoing: false,
+      },
+    ],
+  },
+  {
+    id: 'thread-5',
+    senderName: 'Chef Michael Laurent',
+    senderAvatar: undefined,
+    subject: 'Menu options for upcoming service',
+    snippet: 'Here are the menu options for the private dinner next Saturday. Please let me know which works...',
+    labels: ['label-5', 'label-2'],
+    isStarred: false,
+    isRead: true,
+    timestamp: new Date('2025-01-25T11:20:00'),
+    messages: [
+      {
+        id: 'msg-5-1',
+        from: 'Chef Michael Laurent',
+        content: 'Here are the menu options for the private dinner next Saturday. Please let me know which works best for the guests:\n\n1. Mediterranean Feast\n2. Modern American\n3. Italian Classic',
+        timestamp: new Date('2025-01-25T11:20:00'),
+        isOutgoing: false,
+      },
+    ],
+  },
+];
