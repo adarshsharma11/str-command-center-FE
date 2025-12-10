@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import type { InboxLabel } from './types';
 
 const PRESET_COLORS = [
@@ -61,99 +62,104 @@ export function LabelManager({
   };
 
   return (
-    <div className="p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">Labels</h3>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-6 w-6">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Create Label</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Label name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Color</Label>
-                <div className="flex gap-2 flex-wrap">
-                  {PRESET_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setNewColor(color)}
-                      className={`w-8 h-8 rounded-full transition-transform ${
-                        newColor === color ? 'scale-110 ring-2 ring-primary ring-offset-2' : ''
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-              <Button onClick={handleCreate} className="w-full">
-                Create Label
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
+    <div className="p-4 space-y-2">
       {/* All messages */}
       <button
         onClick={() => onLabelSelect(null)}
-        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-          selectedLabelId === null ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50'
-        }`}
+        className={cn(
+          'w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center gap-3',
+          selectedLabelId === null
+            ? 'bg-accent text-accent-foreground'
+            : 'text-foreground hover:bg-muted/50'
+        )}
       >
+        <Tag className="h-4 w-4" />
         All Messages
       </button>
 
       {/* Labels list */}
-      <div className="space-y-1">
+      <div className="space-y-1 pt-2">
         {labels.map((label) => (
           <div
             key={label.id}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer group transition-colors ${
+            className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer group transition-colors',
               selectedLabelId === label.id ? 'bg-accent' : 'hover:bg-muted/50'
-            }`}
+            )}
             onClick={() => onLabelSelect(label.id)}
           >
             <div
               className="w-3 h-3 rounded-full shrink-0"
               style={{ backgroundColor: label.color }}
             />
-            <span className="flex-1 text-sm truncate">{label.name}</span>
-            <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+            <span className="flex-1 text-sm font-medium truncate">{label.name}</span>
+            <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   openEdit(label);
                 }}
-                className="p-1 hover:bg-background rounded"
+                className="p-1.5 hover:bg-background rounded-md transition-colors"
               >
-                <Pencil className="h-3 w-3 text-muted-foreground" />
+                <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onLabelDelete(label.id);
                 }}
-                className="p-1 hover:bg-background rounded"
+                className="p-1.5 hover:bg-background rounded-md transition-colors"
               >
-                <Trash2 className="h-3 w-3 text-destructive" />
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Create label button */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" className="w-full justify-start gap-3 mt-4 text-muted-foreground hover:text-foreground">
+            <Plus className="h-4 w-4" />
+            Create Label
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Create Label</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Label name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="flex gap-2 flex-wrap">
+                {PRESET_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setNewColor(color)}
+                    className={cn(
+                      'w-8 h-8 rounded-full transition-all',
+                      newColor === color && 'scale-110 ring-2 ring-primary ring-offset-2 ring-offset-background'
+                    )}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+            <Button onClick={handleCreate} className="w-full">
+              Create Label
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit dialog */}
       <Dialog open={!!editingLabel} onOpenChange={(open) => !open && setEditingLabel(null)}>
@@ -177,9 +183,10 @@ export function LabelManager({
                   <button
                     key={color}
                     onClick={() => setNewColor(color)}
-                    className={`w-8 h-8 rounded-full transition-transform ${
-                      newColor === color ? 'scale-110 ring-2 ring-primary ring-offset-2' : ''
-                    }`}
+                    className={cn(
+                      'w-8 h-8 rounded-full transition-all',
+                      newColor === color && 'scale-110 ring-2 ring-primary ring-offset-2 ring-offset-background'
+                    )}
                     style={{ backgroundColor: color }}
                   />
                 ))}

@@ -1,5 +1,6 @@
+import { LayoutGrid, Columns } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, LayoutList } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { InboxViewType } from './types';
 
 interface ViewToggleProps {
@@ -11,22 +12,28 @@ export function ViewToggle({ view, onViewChange }: ViewToggleProps) {
   return (
     <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
       <Button
-        variant={view === 'gmail' ? 'default' : 'ghost'}
+        variant="ghost"
         size="sm"
+        className={cn(
+          'h-8 px-3 gap-2 rounded-md',
+          view === 'gmail' && 'bg-background shadow-sm'
+        )}
         onClick={() => onViewChange('gmail')}
-        className="gap-2"
       >
         <LayoutGrid className="h-4 w-4" />
-        <span className="hidden md:inline">Gmail</span>
+        <span className="text-sm font-medium">Gmail</span>
       </Button>
       <Button
-        variant={view === 'outlook' ? 'default' : 'ghost'}
+        variant="ghost"
         size="sm"
+        className={cn(
+          'h-8 px-3 gap-2 rounded-md',
+          view === 'outlook' && 'bg-background shadow-sm'
+        )}
         onClick={() => onViewChange('outlook')}
-        className="gap-2"
       >
-        <LayoutList className="h-4 w-4" />
-        <span className="hidden md:inline">Outlook</span>
+        <Columns className="h-4 w-4" />
+        <span className="text-sm font-medium">Outlook</span>
       </Button>
     </div>
   );
