@@ -1,7 +1,9 @@
-export interface InboxLabel {
+export interface InboxFolder {
   id: string;
   name: string;
   color: string;
+  parentId: string | null;
+  order: number;
 }
 
 export interface InboxThread {
@@ -10,7 +12,8 @@ export interface InboxThread {
   senderAvatar?: string;
   subject: string;
   snippet: string;
-  labels: string[];
+  folderId: string | null;
+  platform: 'gmail' | 'whatsapp' | 'facebook' | 'instagram' | 'sms' | 'other';
   isStarred: boolean;
   isRead: boolean;
   timestamp: Date;
@@ -24,5 +27,3 @@ export interface InboxMessage {
   timestamp: Date;
   isOutgoing: boolean;
 }
-
-export type InboxViewType = 'gmail' | 'outlook';
