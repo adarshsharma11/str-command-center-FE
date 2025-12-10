@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ViewToggle } from '@/components/inbox/ViewToggle';
 import { ThreadList } from '@/components/inbox/ThreadList';
-import { FloatingChatBubble, FloatingChatIcon } from '@/components/inbox/FloatingChatBubble';
+import { FloatingChatBubble } from '@/components/inbox/FloatingChatBubble';
 import { LabelManager } from '@/components/inbox/LabelManager';
 import { OutlookLayout } from '@/components/inbox/OutlookLayout';
 import { mockLabels, mockThreads } from '@/components/inbox/mockInboxData';
 import type { InboxViewType, InboxLabel, InboxThread } from '@/components/inbox/types';
+import { Mail, Inbox as InboxIcon } from 'lucide-react';
 
 export default function Inbox() {
   const [viewType, setViewType] = useState<InboxViewType>('gmail');
@@ -59,25 +61,31 @@ export default function Inbox() {
   if (viewType === 'outlook') {
     return (
       <Layout>
-        <div className="h-[calc(100vh-4rem)] flex flex-col">
-          <div className="p-4 border-b border-border bg-card flex items-center justify-between">
-            <h1 className="text-xl font-bold">Inbox</h1>
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Inbox</h1>
+              <p className="text-muted-foreground">Manage your guest communications</p>
+            </div>
             <ViewToggle view={viewType} onViewChange={setViewType} />
           </div>
-          <div className="flex-1 overflow-hidden">
-            <OutlookLayout
-              threads={threads}
-              labels={labels}
-              selectedThread={selectedThread}
-              selectedLabelId={selectedLabelId}
-              onThreadSelect={handleThreadClick}
-              onStarToggle={handleStarToggle}
-              onLabelCreate={handleLabelCreate}
-              onLabelUpdate={handleLabelUpdate}
-              onLabelDelete={handleLabelDelete}
-              onLabelSelect={setSelectedLabelId}
-            />
-          </div>
+          
+          <Card className="overflow-hidden">
+            <div className="h-[calc(100vh-12rem)]">
+              <OutlookLayout
+                threads={threads}
+                labels={labels}
+                selectedThread={selectedThread}
+                selectedLabelId={selectedLabelId}
+                onThreadSelect={handleThreadClick}
+                onStarToggle={handleStarToggle}
+                onLabelCreate={handleLabelCreate}
+                onLabelUpdate={handleLabelUpdate}
+                onLabelDelete={handleLabelDelete}
+                onLabelSelect={setSelectedLabelId}
+              />
+            </div>
+          </Card>
         </div>
       </Layout>
     );
@@ -85,38 +93,63 @@ export default function Inbox() {
 
   return (
     <Layout>
-      <div className="flex h-[calc(100vh-4rem)]">
-        {/* Sidebar */}
-        <div className="w-56 bg-card border-r border-border hidden md:block">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <h2 className="font-semibold">Inbox</h2>
-            <ViewToggle view={viewType} onViewChange={setViewType} />
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Inbox</h1>
+            <p className="text-muted-foreground">Manage your guest communications</p>
           </div>
-          <LabelManager
-            labels={labels}
-            onLabelCreate={handleLabelCreate}
-            onLabelUpdate={handleLabelUpdate}
-            onLabelDelete={handleLabelDelete}
-            selectedLabelId={selectedLabelId}
-            onLabelSelect={setSelectedLabelId}
-          />
+          <ViewToggle view={viewType} onViewChange={setViewType} />
         </div>
 
-        {/* Thread List */}
-        <div className="flex-1 bg-background">
-          <div className="p-4 border-b border-border md:hidden flex items-center justify-between">
-            <h2 className="font-semibold">Inbox</h2>
-            <ViewToggle view={viewType} onViewChange={setViewType} />
-          </div>
-          <ScrollArea className="h-full">
-            <ThreadList
-              threads={filteredThreads}
-              labels={labels}
-              selectedThreadId={selectedThread?.id || null}
-              onThreadClick={handleThreadClick}
-              onStarToggle={handleStarToggle}
-            />
-          </ScrollArea>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Labels Sidebar */}
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Mail className="h-5 w-5" />
+                Labels
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <LabelManager
+                labels={labels}
+                onLabelCreate={handleLabelCreate}
+                onLabelUpdate={handleLabelUpdate}
+                onLabelDelete={handleLabelDelete}
+                selectedLabelId={selectedLabelId}
+                onLabelSelect={setSelectedLabelId}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Thread List */}
+          <Card className="lg:col-span-3">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <InboxIcon className="h-5 w-5" />
+                {selectedLabelId
+                  ? labels.find((l) => l.id === selectedLabelId)?.name || 'Messages'
+                  : 'All Messages'}
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  ({filteredThreads.length} conversations)
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[calc(100vh-18rem)]">
+                <ThreadList
+                  threads={filteredThreads}
+                  labels={labels}
+                  selectedThreadId={selectedThread?.id || null}
+                  onThreadClick={handleThreadClick}
+                  onStarToggle={handleStarToggle}
+                />
+              </ScrollArea>
+            </CardContent>
+          </Card>
         </div>
       </div>
 

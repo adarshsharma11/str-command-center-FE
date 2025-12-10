@@ -46,7 +46,10 @@ export function OutlookLayout({
   return (
     <div className="flex h-full">
       {/* Left column - Labels */}
-      <div className="w-56 bg-card border-r border-border shrink-0">
+      <div className="w-64 bg-muted/30 border-r border-border shrink-0">
+        <div className="p-4 border-b border-border">
+          <h3 className="font-semibold text-foreground">Folders & Labels</h3>
+        </div>
         <LabelManager
           labels={labels}
           onLabelCreate={onLabelCreate}
@@ -58,7 +61,7 @@ export function OutlookLayout({
       </div>
 
       {/* Center column - Thread list */}
-      <div className="w-80 bg-card border-r border-border shrink-0">
+      <div className="w-80 bg-card border-r border-border shrink-0 flex flex-col">
         <div className="p-4 border-b border-border">
           <h2 className="font-semibold text-foreground">
             {selectedLabelId
@@ -69,19 +72,19 @@ export function OutlookLayout({
             {filteredThreads.length} conversations
           </p>
         </div>
-        <ScrollArea className="h-[calc(100%-5rem)]">
+        <ScrollArea className="flex-1">
           <div className="divide-y divide-border">
             {filteredThreads.map((thread) => (
               <div
                 key={thread.id}
                 className={cn(
-                  'p-3 cursor-pointer transition-colors hover:bg-muted/50',
+                  'p-4 cursor-pointer transition-colors hover:bg-muted/50',
                   selectedThread?.id === thread.id && 'bg-accent',
                   !thread.isRead && 'bg-primary/5'
                 )}
                 onClick={() => onThreadSelect(thread)}
               >
-                <div className="flex items-start gap-2 mb-1">
+                <div className="flex items-start gap-3 mb-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -96,24 +99,29 @@ export function OutlookLayout({
                     )}
                   </button>
                   <div className="flex-1 min-w-0">
-                    <p
-                      className={cn(
-                        'text-sm truncate',
-                        !thread.isRead && 'font-semibold text-foreground'
-                      )}
-                    >
-                      {thread.senderName}
-                    </p>
-                    <p className="text-sm text-muted-foreground truncate">
+                    <div className="flex items-center justify-between gap-2">
+                      <p
+                        className={cn(
+                          'text-sm truncate',
+                          !thread.isRead && 'font-semibold text-foreground'
+                        )}
+                      >
+                        {thread.senderName}
+                      </p>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {format(thread.timestamp, 'MMM d')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate mt-0.5">
                       {thread.subject}
                     </p>
+                    <p className="text-xs text-muted-foreground truncate mt-1">
+                      {thread.snippet}
+                    </p>
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {format(thread.timestamp, 'MMM d')}
-                  </span>
                 </div>
-                <div className="flex gap-1 ml-6">
-                  {thread.labels.slice(0, 2).map((labelId) => {
+                <div className="flex gap-1.5 ml-7">
+                  {thread.labels.slice(0, 3).map((labelId) => {
                     const label = getLabel(labelId);
                     return label ? (
                       <div
@@ -135,10 +143,10 @@ export function OutlookLayout({
         {selectedThread ? (
           <>
             {/* Header */}
-            <div className="p-4 border-b border-border bg-card">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/10 text-primary">
+            <div className="p-6 border-b border-border bg-card">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="bg-primary/10 text-primary text-lg">
                     {selectedThread.senderName
                       .split(' ')
                       .map((n) => n[0])
@@ -148,10 +156,10 @@ export function OutlookLayout({
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <p className="font-semibold">{selectedThread.senderName}</p>
+                  <p className="font-semibold text-lg">{selectedThread.senderName}</p>
                   <p className="text-sm text-muted-foreground">{selectedThread.subject}</p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-2">
                   {selectedThread.labels.map((labelId) => {
                     const label = getLabel(labelId);
                     return label ? (
@@ -169,12 +177,12 @@ export function OutlookLayout({
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-6">
               <div className="space-y-6 max-w-3xl">
                 {selectedThread.messages.map((msg) => (
-                  <div key={msg.id} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
+                  <div key={msg.id} className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
                           {msg.from
                             .split(' ')
@@ -189,7 +197,7 @@ export function OutlookLayout({
                         {format(msg.timestamp, 'MMM d, h:mm a')}
                       </span>
                     </div>
-                    <div className="ml-10 p-4 bg-muted/50 rounded-lg">
+                    <div className="ml-12 p-4 bg-muted/50 rounded-lg">
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     </div>
                   </div>
@@ -198,8 +206,8 @@ export function OutlookLayout({
             </ScrollArea>
 
             {/* Composer */}
-            <div className="p-4 border-t border-border bg-card">
-              <div className="flex gap-2">
+            <div className="p-6 border-t border-border bg-card">
+              <div className="flex gap-3">
                 <Button variant="ghost" size="icon" className="shrink-0">
                   <Paperclip className="h-4 w-4" />
                 </Button>
@@ -217,8 +225,9 @@ export function OutlookLayout({
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-muted-foreground">Select a conversation to view</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            <p className="text-lg">Select a conversation</p>
+            <p className="text-sm">Choose a thread from the list to view messages</p>
           </div>
         )}
       </div>
