@@ -6,17 +6,20 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
-import { mockBookings } from '@/lib/mockData';
+import { useBookingsQuery, toViewBooking, type ViewBooking } from '@/lib/api/booking';
 
 export default function Bookings() {
   const [searchTerm, setSearchTerm] = useState('');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-
-  // TODO: INTEGRATION STUB: Replace with Supabase query
-  const bookings = mockBookings.filter(b => {
+  const page = 1;
+  const limit = 10;
+  const { data, isLoading } = useBookingsQuery(page, limit);
+  const apiBookings = data?.data?.bookings ?? [];
+  const allBookings: ViewBooking[] = apiBookings.map(toViewBooking);
+  const bookings = allBookings.filter(b => {
     const matchesSearch = b.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         b.propertyName.toLowerCase().includes(searchTerm.toLowerCase());
+      b.propertyName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPlatform = platformFilter === 'all' || b.platform === platformFilter;
     const matchesStatus = statusFilter === 'all' || b.reservationStatus === statusFilter;
     return matchesSearch && matchesPlatform && matchesStatus;
@@ -100,7 +103,11 @@ export default function Bookings() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bookings.map((booking) => (
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={9}>Loading...</TableCell>
+                    </TableRow>
+                  ) : bookings.map((booking) => (
                     <TableRow key={booking.id} className="cursor-pointer hover:bg-accent/50">
                       <TableCell className="font-medium">{booking.guestName}</TableCell>
                       <TableCell>{booking.propertyName}</TableCell>
