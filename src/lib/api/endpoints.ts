@@ -7,5 +7,8 @@ export const ENDPOINTS = {
   },
   BOOKING : {
     LIST : `${API_PREFIX}/bookings`,
+  },
+  PROPERTY : {
+    LIST : `${API_PREFIX}/property`,
   }
 } as const;

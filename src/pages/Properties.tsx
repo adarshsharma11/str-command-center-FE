@@ -7,14 +7,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Link2, ExternalLink } from 'lucide-react';
-import { mockProperties, mockListings } from '@/lib/mockData';
+import { usePropertiesQuery, propertyMappers, type PropertyView, type PropertyListingView } from '@/lib/api/property';
 
 export default function Properties() {
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
 
-  // TODO: INTEGRATION STUB: Replace with Supabase query
-  const properties = mockProperties;
-  const listings = mockListings;
+  const page = 1;
+  const limit = 10;
+  const { data, isLoading } = usePropertiesQuery(page, limit);
+  const apiItems = data?.data?.data ?? [];
+  const properties: PropertyView[] = apiItems.map(propertyMappers.toViewProperty);
+  const listings: PropertyListingView[] = apiItems.flatMap(propertyMappers.toPropertyListings);
 
   const getPropertyListings = (propertyId: string) => {
     return listings.filter(l => l.propertyId === propertyId);
@@ -97,7 +100,7 @@ export default function Properties() {
 
         {/* Properties Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {properties.map((property) => {
+          {(isLoading ? [] : properties).map((property) => {
             const propertyListings = getPropertyListings(property.id);
             
             return (
