@@ -2,12 +2,19 @@ import { useQuery, useMutation, type QueryOptions, type MutationOptions } from '
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 
+import { CrewApiItem } from '@/lib/api/crew';
+
 export type CategoryApiItem = {
   id: number;
   name: string;
   parent_id?: number | null;
   created_at?: string;
   updated_at?: string;
+};
+
+export type CategoryTreeNode = CategoryApiItem & {
+  children?: CategoryTreeNode[];
+  crews?: CrewApiItem[];
 };
 
 type CategoryListResponse = {
@@ -22,6 +29,14 @@ type CategoryListResponse = {
     limit?: number;
     total?: number;
   } | CategoryApiItem[]; // support both shapes
+};
+
+type CategoryTreeResponse = {
+  success?: boolean;
+  message?: string;
+  data: {
+    tree: CategoryTreeNode[];
+  };
 };
 
 export type CreateCategoryPayload = {
@@ -54,6 +69,19 @@ export function useCategoriesQuery(page = 1, limit = 100, options?: QueryOptions
   return useQuery<CategoryListResponse>({
     queryKey: ['categories', page, limit],
     queryFn: () => fetchCategories(page, limit),
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
+async function fetchCategoryTree(): Promise<CategoryTreeResponse> {
+  return apiClient.get<CategoryTreeResponse>(ENDPOINTS.CATEGORIES.TREE);
+}
+
+export function useCategoryTreeQuery(options?: QueryOptions<CategoryTreeResponse>) {
+  return useQuery<CategoryTreeResponse>({
+    queryKey: ['categories', 'tree'],
+    queryFn: () => fetchCategoryTree(),
     staleTime: 30_000,
     ...options,
   });

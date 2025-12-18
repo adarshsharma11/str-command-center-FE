@@ -7,36 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Link2, ExternalLink } from 'lucide-react';
-import { usePropertiesQuery, useCreatePropertyMutation, propertyMappers, type PropertyView, type PropertyListingView } from '@/lib/api/property';
-import { useToast } from '@/hooks/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
+import { usePropertiesQuery, propertyMappers, type PropertyView, type PropertyListingView } from '@/lib/api/property';
 
 export default function Properties() {
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const [airbnbId, setAirbnbId] = useState('');
-  const [vrboId, setVrboId] = useState('');
-  const [bookingId, setBookingId] = useState('');
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const createMutation = useCreatePropertyMutation({
-    onSuccess: () => {
-      toast({ title: 'Property created', description: 'The property has been added.' });
-      setAddOpen(false);
-      setName('');
-      setAddress('');
-      setAirbnbId('');
-      setVrboId('');
-      setBookingId('');
-      queryClient.invalidateQueries({ queryKey: ['properties'] });
-    },
-    onError: (err) => {
-      const msg = err instanceof Error ? err.message : 'Failed to create property';
-      toast({ title: 'Error', description: msg });
-    },
-  });
 
   const page = 1;
   const limit = 10;
@@ -69,7 +43,7 @@ export default function Properties() {
             <h1 className="text-3xl font-bold text-foreground">Properties</h1>
             <p className="text-muted-foreground">Manage your rental properties</p>
           </div>
-          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <Dialog>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -83,11 +57,11 @@ export default function Properties() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="property-name">Property Name</Label>
-                  <Input id="property-name" placeholder="Enter property name" value={name} onChange={(e) => setName(e.target.value)} />
+                  <Input id="property-name" placeholder="Enter property name" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="property-address">Address</Label>
-                  <Input id="property-address" placeholder="Enter property address" value={address} onChange={(e) => setAddress(e.target.value)} />
+                  <Input id="property-address" placeholder="Enter property address" />
                 </div>
                 <div className="space-y-3">
                   <Label>Platform Listing IDs</Label>
@@ -97,15 +71,15 @@ export default function Properties() {
                   <div className="grid gap-3">
                     <div className="flex items-center gap-3">
                       <Label htmlFor="airbnb-id" className="w-32 text-right">Airbnb</Label>
-                      <Input id="airbnb-id" placeholder="Airbnb listing ID" value={airbnbId} onChange={(e) => setAirbnbId(e.target.value)} />
+                      <Input id="airbnb-id" placeholder="Airbnb listing ID" />
                     </div>
                     <div className="flex items-center gap-3">
                       <Label htmlFor="vrbo-id" className="w-32 text-right">Vrbo</Label>
-                      <Input id="vrbo-id" placeholder="Vrbo listing ID" value={vrboId} onChange={(e) => setVrboId(e.target.value)} />
+                      <Input id="vrbo-id" placeholder="Vrbo listing ID" />
                     </div>
                     <div className="flex items-center gap-3">
                       <Label htmlFor="booking-id" className="w-32 text-right">Booking.com</Label>
-                      <Input id="booking-id" placeholder="Booking.com listing ID" value={bookingId} onChange={(e) => setBookingId(e.target.value)} />
+                      <Input id="booking-id" placeholder="Booking.com listing ID" />
                     </div>
                     <div className="flex items-center gap-3">
                       <Label htmlFor="direct-id" className="w-32 text-right">Direct Website</Label>
@@ -117,25 +91,7 @@ export default function Properties() {
                   <DialogTrigger asChild>
                     <Button variant="outline">Cancel</Button>
                   </DialogTrigger>
-                  <Button
-                    onClick={() => {
-                      if (!name.trim()) {
-                        toast({ title: 'Name required', description: 'Please enter a property name.' });
-                        return;
-                      }
-                      createMutation.mutate({
-                        name: name.trim(),
-                        status: 'active',
-                        address: address.trim() || undefined,
-                        airbnb_id: airbnbId.trim() || undefined,
-                        vrbo_id: vrboId.trim() || undefined,
-                        booking_id: bookingId.trim() || undefined,
-                      });
-                    }}
-                    disabled={createMutation.isPending}
-                  >
-                    {createMutation.isPending ? 'Creating...' : 'Create Property'}
-                  </Button>
+                  <Button>Create Property</Button>
                 </div>
               </div>
             </DialogContent>

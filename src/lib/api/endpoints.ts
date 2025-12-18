@@ -13,5 +13,9 @@ export const ENDPOINTS = {
   },
   CATEGORIES: {
     LIST: `${API_PREFIX}/categories`,
+    TREE: `${API_PREFIX}/categories/tree`,
+  },
+  CREWS: {
+    LIST: `${API_PREFIX}/crews`,
   }
 } as const;

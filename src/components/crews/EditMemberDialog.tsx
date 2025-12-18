@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,42 +10,51 @@ interface EditMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (member: CrewMember) => void;
+  mode?: 'create' | 'edit';
 }
 
-export function EditMemberDialog({ member, open, onOpenChange, onSave }: EditMemberDialogProps) {
-  const [name, setName] = useState(member?.name || '');
-  const [role, setRole] = useState(member?.role || '');
-  const [email, setEmail] = useState(member?.contactInfo.email || '');
-  const [phone, setPhone] = useState(member?.contactInfo.phone || '');
+export function EditMemberDialog({ member, open, onOpenChange, onSave, mode = 'edit' }: EditMemberDialogProps) {
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
-  // Reset form when member changes
-  useState(() => {
-    if (member) {
-      setName(member.name);
-      setRole(member.role);
-      setEmail(member.contactInfo.email);
-      setPhone(member.contactInfo.phone);
+  // Reset form when member changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      if (mode === 'edit' && member) {
+        setName(member.name);
+        setRole(member.role);
+        setEmail(member.contactInfo.email);
+        setPhone(member.contactInfo.phone);
+      } else {
+        setName('');
+        setRole('');
+        setEmail('');
+        setPhone('');
+      }
     }
-  });
+  }, [member, open, mode]);
 
   const handleSave = () => {
-    if (!member) return;
+    const memberId = member?.id || `new-${Date.now()}`;
+    const memberOrder = member?.order || 0;
+    
     onSave({
-      ...member,
+      id: memberId,
       name,
       role,
+      order: memberOrder,
       contactInfo: { email, phone },
     });
     onOpenChange(false);
   };
 
-  if (!member) return null;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Contact</DialogTitle>
+          <DialogTitle>{mode === 'create' ? 'Add New Contact' : 'Edit Contact'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
