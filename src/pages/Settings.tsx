@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +8,30 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCategoriesQuery, useCreateCategoryMutation, categoryUtils } from '@/lib/api/category';
+import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function Settings() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [categoryName, setCategoryName] = useState('');
+  const [parentId, setParentId] = useState<string | undefined>();
+  const { data: categoriesResp } = useCategoriesQuery(1, 100);
+  const categoriesAll = categoryUtils.normalizeList(categoriesResp ?? { data: [] });
+  const categories = categoriesAll.filter((c) => c.parent_id == null);
+  const createCategoryMutation = useCreateCategoryMutation({
+    onSuccess: () => {
+      toast({ title: 'Category created', description: 'The category has been added.' });
+      setCategoryName('');
+      setParentId(undefined);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+    onError: (err) => {
+      const msg = err instanceof Error ? err.message : 'Failed to create category';
+      toast({ title: 'Error', description: msg });
+    },
+  });
   return (
     <Layout>
       <div className="p-6 space-y-6">
@@ -77,6 +100,73 @@ export default function Settings() {
                       </div>
                     </div>
                     <Button>Save Business Profile</Button>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Categories</CardTitle>
+                    <CardDescription>Create categories and set a parent</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="category-name">Category Name</Label>
+                        <Input
+                          id="category-name"
+                          placeholder="e.g., Luxury Services"
+                          value={categoryName}
+                          onChange={(e) => setCategoryName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="parent-category">Parent Category</Label>
+                        <Select value={parentId} onValueChange={(v) => setParentId(v === 'none' ? undefined : v)} >
+                          <SelectTrigger id="parent-category">
+                            <SelectValue placeholder="None" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={'none'}>None</SelectItem>
+                            {categories.map((c) => (
+                              <SelectItem key={c.id} value={String(c.id)}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={() => {
+                          if (!categoryName.trim()) {
+                            toast({ title: 'Name required', description: 'Please enter a category name.' });
+                            return;
+                          }
+                          const pid = parentId ? Number(parentId) : null;
+                          createCategoryMutation.mutate({ name: categoryName.trim(), parent_id: pid });
+                        }}
+                        disabled={createCategoryMutation.isPending}
+                      >
+                        {createCategoryMutation.isPending ? 'Creating...' : 'Create Category'}
+                      </Button>
+                    </div>
+                    <Separator />
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Existing Categories</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {categories.map((c) => (
+                          <div key={c.id} className="p-2 rounded border border-border">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-foreground">{c.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {typeof c.parent_id === 'number' ? `Parent: ${c.parent_id}` : 'No parent'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

@@ -10,5 +10,8 @@ export const ENDPOINTS = {
   },
   PROPERTY : {
     LIST : `${API_PREFIX}/property`,
+  },
+  CATEGORIES: {
+    LIST: `${API_PREFIX}/categories`,
   }
 } as const;

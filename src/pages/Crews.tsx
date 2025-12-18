@@ -9,12 +9,37 @@ import { mockCrewFolders } from '@/lib/mockData';
 import { ChevronRight, ChevronDown, Plus, GripVertical, FolderOpen, Folder, User } from 'lucide-react';
 import { EditMemberDialog } from '@/components/crews/EditMemberDialog';
 import type { CrewFolder, CrewMember } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCategoriesQuery, useCreateCategoryMutation, categoryUtils } from '@/lib/api/category';
+import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function Crews() {
   const [folders, setFolders] = useState<CrewFolder[]>(mockCrewFolders);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['folder-1', 'folder-2']));
   const [editingMember, setEditingMember] = useState<CrewMember | null>(null);
   const [draggedItem, setDraggedItem] = useState<{ type: 'folder' | 'member'; id: string; parentId: string | null } | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [categoryName, setCategoryName] = useState('');
+  const [parentId, setParentId] = useState<string | undefined>();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: categoriesResp } = useCategoriesQuery(1, 100);
+  const categoriesAll = categoryUtils.normalizeList(categoriesResp ?? { data: [] });
+  const categories = categoriesAll.filter((c) => c.parent_id == null);
+  const createCategoryMutation = useCreateCategoryMutation({
+    onSuccess: () => {
+      toast({ title: 'Category created', description: 'The category has been added.' });
+      setCategoryName('');
+      setParentId(undefined);
+      setAddOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+    onError: (err) => {
+      const msg = err instanceof Error ? err.message : 'Failed to create category';
+      toast({ title: 'Error', description: msg });
+    },
+  });
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => {
@@ -137,16 +162,44 @@ export default function Crews() {
             <h1 className="text-3xl font-bold text-foreground">Crew Management</h1>
             <p className="text-muted-foreground">Organize your service providers in priority order</p>
           </div>
-          <Dialog>
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2"><Plus className="h-4 w-4" />Add Category</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Add New Category</DialogTitle></DialogHeader>
               <div className="space-y-4 py-4">
-                <div className="space-y-2"><Label>Category Name</Label><Input placeholder="e.g., Transportation Services" /></div>
-                <div className="space-y-2"><Label>Parent Category (Optional)</Label><Input placeholder="Leave empty for root level" /></div>
-                <Button className="w-full">Create Category</Button>
+                <div className="space-y-2"><Label>Category Name</Label><Input placeholder="e.g., Transportation Services" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} /></div>
+                <div className="space-y-2">
+                  <Label>Parent Category (Optional)</Label>
+                  <Select value={parentId} onValueChange={(v) => setParentId(v === 'none' ? undefined : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={'none'}>None</SelectItem>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    if (!categoryName.trim()) {
+                      toast({ title: 'Name required', description: 'Please enter a category name.' });
+                      return;
+                    }
+                    const pid = parentId ? Number(parentId) : null;
+                    createCategoryMutation.mutate({ name: categoryName.trim(), parent_id: pid });
+                  }}
+                  disabled={createCategoryMutation.isPending}
+                >
+                  {createCategoryMutation.isPending ? 'Creating...' : 'Create Category'}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
