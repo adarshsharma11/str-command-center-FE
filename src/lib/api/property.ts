@@ -1,10 +1,11 @@
-import { useQuery, QueryOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, type QueryOptions, type MutationOptions } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 
 type PropertyApiItem = {
   id: number;
   name?: string;
+  address?: string;
   status?: string;
   created_at?: string;
   updated_at?: string;
@@ -51,7 +52,7 @@ function toViewProperty(p: PropertyApiItem): PropertyView {
   return {
     id: String(p.id),
     name: p.name || '—',
-    address: '—',
+    address: p.address || '—',
     internalStatus: internal,
   };
 }
@@ -86,6 +87,34 @@ export function usePropertiesQuery(page = 1, limit = 10, options?: QueryOptions<
     queryKey: ['properties', page, limit],
     queryFn: () => fetchProperties(page, limit),
     staleTime: 30_000,
+    ...options,
+  });
+}
+
+// Create Property
+export type CreatePropertyPayload = {
+  name: string;
+  status: 'active' | 'inactive' | 'maintenance';
+  address?: string;
+  airbnb_id?: string;
+  vrbo_id?: string;
+  booking_id?: string;
+};
+
+type CreatePropertyResponse = {
+  success?: boolean;
+  message?: string;
+  data?: PropertyApiItem | Record<string, unknown>;
+};
+
+async function createProperty(payload: CreatePropertyPayload): Promise<CreatePropertyResponse> {
+  return apiClient.post<CreatePropertyResponse>(ENDPOINTS.PROPERTY.LIST, payload);
+}
+
+export function useCreatePropertyMutation(options?: MutationOptions<CreatePropertyResponse, Error, CreatePropertyPayload>) {
+  return useMutation<CreatePropertyResponse, Error, CreatePropertyPayload>({
+    mutationKey: ['properties', 'create'],
+    mutationFn: (payload) => createProperty(payload),
     ...options,
   });
 }

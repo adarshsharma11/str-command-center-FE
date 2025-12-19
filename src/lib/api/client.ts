@@ -29,7 +29,7 @@ class ApiClient {
         clearToken();
         try {
           window.location.replace('/auth');
-        } catch {}
+        } catch { void 0; }
       }
       const error = await response.json().catch(() => ({ error: 'Request failed' }));
       throw new Error(error.error || `HTTP ${response.status}`);
