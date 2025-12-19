@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { ChevronRight, ChevronDown, Plus, GripVertical, FolderOpen, Folder, User } from 'lucide-react';
 import { EditMemberDialog } from '@/components/crews/EditMemberDialog';
+import { CrewsListSkeleton } from '@/components/crews/CrewsListSkeleton';
 import type { CrewFolder, CrewMember } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCategoriesQuery, useCreateCategoryMutation, categoryUtils, useCategoryTreeQuery, type CategoryTreeNode } from '@/lib/api/category';
@@ -57,8 +58,10 @@ export default function Crews() {
   const [parentId, setParentId] = useState<string | undefined>();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: categoriesResp } = useCategoriesQuery(1, 100);
-  const { data: treeResp } = useCategoryTreeQuery();
+  const { data: categoriesResp, isLoading: categoriesLoading } = useCategoriesQuery(1, 100);
+  const { data: treeResp, isLoading: treeLoading } = useCategoryTreeQuery();
+
+  const isLoading = categoriesLoading || treeLoading;
 
   useEffect(() => {
     if (!treeResp?.data?.tree) return;
@@ -352,7 +355,11 @@ export default function Crews() {
             <p className="text-sm text-muted-foreground mt-1">Drag to reorder priority. Click a contact to edit. Top members are contacted first.</p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-1">{getFolderChildren(null).map(folder => renderFolder(folder))}</div>
+            {isLoading ? (
+              <CrewsListSkeleton folderCount={3} membersPerFolder={2} showNestedFolders={true} />
+            ) : (
+              <div className="space-y-1">{getFolderChildren(null).map(folder => renderFolder(folder))}</div>
+            )}
           </CardContent>
         </Card>
       </div>

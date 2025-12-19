@@ -15,11 +15,11 @@ import {
   ColorAssignment 
 } from '@/components/calendar/types';
 import { 
-  mockBookings, 
-  mockVendorTasks, 
   mockColorAssignments,
   mockOccupancyData,
 } from '@/components/calendar/mockCalendarData';
+import { useCalendarBookingsQuery } from '@/lib/api/booking';
+import { usePropertiesQuery } from '@/lib/api/property';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { CalendarPageSkeleton } from '@/components/skeletons/CalendarSkeleton';
 
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -37,15 +38,35 @@ export default function Calendar() {
   const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null);
   const [showAddEvent, setShowAddEvent] = useState(false);
 
-  // TODO: integrate booking API
-  const allBookings = selectedProperty === 'all' 
-    ? mockBookings 
-    : mockBookings.filter(b => b.propertyId === selectedProperty);
+  // Fetch bookings from API with larger limit for calendar view
+  const { data: bookingsData, isLoading: isLoadingBookings, error: bookingsError } = useCalendarBookingsQuery(1, 100);
+  
+  // Fetch properties from API
+  const { data: propertiesData, isLoading: isLoadingProperties, error: propertiesError } = usePropertiesQuery(1, 50);
 
-  // TODO: fetch vendor-task assignments
+  // Transform API bookings to calendar format
+  const apiBookings = useMemo(() => {
+    if (!bookingsData?.bookings) return [];
+    return bookingsData.bookings;
+  }, [bookingsData]);
+
+  // Extract vendor tasks from API response
+  const apiTasks = useMemo(() => {
+    if (!bookingsData?.vendorTasks) return [];
+    return bookingsData.vendorTasks;
+  }, [bookingsData]);
+
+  // Filter bookings by selected property
+  const allBookings = useMemo(() => {
+    return selectedProperty === 'all' 
+      ? apiBookings 
+      : apiBookings.filter(b => b.propertyId === selectedProperty);
+  }, [apiBookings, selectedProperty]);
+
+  // Use vendor tasks from API
   const allTasks = selectedProperty === 'all'
-    ? mockVendorTasks
-    : mockVendorTasks.filter(t => t.propertyId === selectedProperty);
+    ? apiTasks
+    : apiTasks.filter(t => t.propertyId === selectedProperty);
 
   // Get the date range for the current view
   const getViewDateRange = useMemo(() => {
@@ -83,13 +104,14 @@ export default function Calendar() {
     });
   }, [allTasks, getViewDateRange]);
 
-  // TODO: pull from user settings / properties API
-  const properties = [
-    { id: 'p1', name: 'Oceanfront Villa' },
-    { id: 'p2', name: 'Mountain Retreat' },
-    { id: 'p3', name: 'Downtown Penthouse' },
-    { id: 'p4', name: 'Lakeside Cabin' },
-  ];
+  // Transform properties from API
+  const properties = useMemo(() => {
+    if (!propertiesData?.data?.data) return [];
+    return propertiesData.data.data.map(property => ({
+      id: String(property.id),
+      name: property.name || `Property ${property.id}`,
+    }));
+  }, [propertiesData]);
 
   const handleBookingClick = useCallback((booking: CalendarBooking) => {
     setSelectedBooking(booking);
@@ -120,80 +142,106 @@ export default function Calendar() {
     setShowAddEvent(false);
   };
 
-  return (
-    <Layout>
-      <ScrollArea className="h-[calc(100vh-4rem)]">
-        <div className="flex flex-col">
-          {/* Header */}
-          <CalendarHeader
-            currentDate={currentDate}
-            currentView={currentView}
-            colorAssignments={colorAssignments}
-            selectedProperty={selectedProperty}
-            properties={properties}
-            onDateChange={setCurrentDate}
-            onViewChange={setCurrentView}
-            onColorAssignmentsChange={setColorAssignments}
-            onPropertyChange={setSelectedProperty}
-            onAddEvent={handleAddEvent}
-          />
+  // Handle loading and error states
+  if (isLoadingBookings || isLoadingProperties) {
+    return (
+      <Layout>
+        <CalendarPageSkeleton />
+      </Layout>
+    );
+  }
 
-          {/* Calendar View */}
-          <div className="bg-background min-h-[400px]">
-            {currentView === 'day' && (
-              <DayView
-                date={currentDate}
-                bookings={bookings}
-                tasks={tasks}
-                colorAssignments={colorAssignments}
-                onBookingClick={handleBookingClick}
-                onTaskClick={handleTaskClick}
-              />
-            )}
-
-            {currentView === 'week' && (
-              <WeekView
-                date={currentDate}
-                bookings={bookings}
-                tasks={tasks}
-                colorAssignments={colorAssignments}
-                onBookingClick={handleBookingClick}
-                onTaskClick={handleTaskClick}
-              />
-            )}
-
-            {currentView === 'month' && (
-              <MonthView
-                date={currentDate}
-                bookings={bookings}
-                colorAssignments={colorAssignments}
-                colorBy="property"
-                onBookingClick={handleBookingClick}
-                onDayClick={handleDayClick}
-              />
-            )}
-
-            {currentView === 'year' && (
-              <YearView
-                date={currentDate}
-                bookings={bookings}
-                occupancyData={mockOccupancyData}
-                onMonthClick={handleMonthClick}
-              />
-            )}
-          </div>
-
-          {/* Event Cards List */}
-          <div className="p-6 border-t border-border">
-            <EventCardList
-              bookings={bookings}
-              tasks={tasks}
-              colorAssignments={colorAssignments}
-              onBookingClick={handleBookingClick}
-              onTaskClick={handleTaskClick}
-            />
+  if (bookingsError || propertiesError) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <div className="text-center">
+            <p className="text-destructive mb-2">Error loading calendar data</p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Retry
+            </Button>
           </div>
         </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <div className="flex h-[calc(100vh-4rem)]">
+        <ScrollArea className="flex-1">
+          <div className="flex flex-col">
+            {/* Header */}
+            <CalendarHeader
+              currentDate={currentDate}
+              currentView={currentView}
+              colorAssignments={colorAssignments}
+              selectedProperty={selectedProperty}
+              properties={properties}
+              onDateChange={setCurrentDate}
+              onViewChange={setCurrentView}
+              onColorAssignmentsChange={setColorAssignments}
+              onPropertyChange={setSelectedProperty}
+              onAddEvent={handleAddEvent}
+            />
+
+            {/* Calendar View */}
+            <div className="bg-background min-h-[400px]">
+              {currentView === 'day' && (
+                <DayView
+                  date={currentDate}
+                  bookings={bookings}
+                  tasks={tasks}
+                  colorAssignments={colorAssignments}
+                  onBookingClick={handleBookingClick}
+                  onTaskClick={handleTaskClick}
+                />
+              )}
+
+              {currentView === 'week' && (
+                <WeekView
+                  date={currentDate}
+                  bookings={bookings}
+                  tasks={tasks}
+                  colorAssignments={colorAssignments}
+                  onBookingClick={handleBookingClick}
+                  onTaskClick={handleTaskClick}
+                />
+              )}
+
+              {currentView === 'month' && (
+                <MonthView
+                  date={currentDate}
+                  bookings={bookings}
+                  colorAssignments={colorAssignments}
+                  colorBy="property"
+                  onBookingClick={handleBookingClick}
+                  onDayClick={handleDayClick}
+                />
+              )}
+
+              {currentView === 'year' && (
+                <YearView
+                  date={currentDate}
+                  bookings={bookings}
+                  occupancyData={mockOccupancyData}
+                  onMonthClick={handleMonthClick}
+                />
+              )}
+            </div>
+
+            {/* Event Cards List */}
+            <div className="p-6 border-t border-border">
+              <EventCardList
+                bookings={bookings}
+                tasks={tasks}
+                colorAssignments={colorAssignments}
+                onBookingClick={handleBookingClick}
+                onTaskClick={handleTaskClick}
+              />
+            </div>
+          </div>
+        </ScrollArea>
 
         {/* Side Panel */}
         {selectedBooking && (
@@ -203,7 +251,7 @@ export default function Calendar() {
             onClose={() => setSelectedBooking(null)}
           />
         )}
-      </ScrollArea>
+      </div>
 
       {/* Add Event Dialog */}
       <Dialog open={showAddEvent} onOpenChange={setShowAddEvent}>
