@@ -3,6 +3,7 @@ import { NavLink } from '@/components/NavLink';
 import { LayoutDashboard, Calendar, Inbox, Users, Zap, Home, BookOpen, Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 interface LayoutProps {
   children: ReactNode;
 }
@@ -43,8 +44,10 @@ export function Layout({
   children
 }: LayoutProps) {
   const navigate = useNavigate();
-  const handleLogout = () => {
-    // TODO: INTEGRATION STUB: Implement Supabase signOut
+  const { logout } = useAuth();
+  
+  const handleLogout = async () => {
+    await logout();
     navigate('/auth');
   };
   return <div className="flex min-h-screen w-full bg-background">

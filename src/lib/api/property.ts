@@ -1,6 +1,7 @@
 import { useQuery, useMutation, type QueryOptions, type MutationOptions } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
+import * as yup from 'yup';
 
 type PropertyApiItem = {
   id: number;
@@ -120,3 +121,28 @@ export function useCreatePropertyMutation(options?: MutationOptions<CreateProper
 }
 
 export const propertyMappers = { toViewProperty, toPropertyListings };
+
+// Yup validation schema for property creation
+export const createPropertySchema = yup.object({
+  name: yup.string()
+    .required('Property name is required')
+    .min(3, 'Property name must be at least 3 characters')
+    .max(100, 'Property name must not exceed 100 characters'),
+  address: yup.string()
+    .optional()
+    .max(200, 'Address must not exceed 200 characters'),
+  status: yup.string()
+    .oneOf(['active', 'inactive', 'maintenance'], 'Status must be Active, Inactive, or Maintenance')
+    .required('Status is required'),
+  airbnb_id: yup.string()
+    .optional()
+    .max(50, 'Airbnb ID must not exceed 50 characters'),
+  vrbo_id: yup.string()
+    .optional()
+    .max(50, 'Vrbo ID must not exceed 50 characters'),
+  booking_id: yup.string()
+    .optional()
+    .max(50, 'Booking.com ID must not exceed 50 characters'),
+});
+
+export type CreatePropertyFormData = yup.InferType<typeof createPropertySchema>;

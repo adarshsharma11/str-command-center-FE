@@ -37,6 +37,7 @@ export interface VendorTask {
   duration: number; // in minutes
   status: 'scheduled' | 'in-progress' | 'completed';
   notes?: string;
+  propertyName?: string;
 }
 
 export interface CalendarEvent {

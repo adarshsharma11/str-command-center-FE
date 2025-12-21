@@ -1,19 +1,41 @@
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
-import { ChevronRight, ChevronDown, Plus, GripVertical, FolderOpen, Folder, User } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, GripVertical, FolderOpen, Folder, User, Trash2 } from 'lucide-react';
 import { EditMemberDialog } from '@/components/crews/EditMemberDialog';
 import { CrewsListSkeleton } from '@/components/crews/CrewsListSkeleton';
+
+const createCrewSchema = yup.object({
+  name: yup.string().required('Crew member name is required').min(2, 'Name must be at least 2 characters'),
+  role: yup.string().required('Role is required').min(2, 'Role must be at least 2 characters'),
+  email: yup.string().email('Please enter a valid email address').required('Email is required'),
+  phone: yup.string().required('Phone number is required').min(10, 'Phone number must be at least 10 characters'),
+});
+
+type CreateCrewFormData = yup.InferType<typeof createCrewSchema>;
 import type { CrewFolder, CrewMember } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCategoriesQuery, useCreateCategoryMutation, categoryUtils, useCategoryTreeQuery, type CategoryTreeNode } from '@/lib/api/category';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCreateCrewMutation, useUpdateCrewMutation, useCrewsQuery, type CrewApiItem } from '@/lib/api/crew';
+import { useCreateCrewMutation, useUpdateCrewMutation, useCrewsQuery, useDeleteCrewMutation, type CrewApiItem } from '@/lib/api/crew';
 
 function flattenCategoryTree(nodes: CategoryTreeNode[], parentId: string | null = null): CrewFolder[] {
   let result: CrewFolder[] = [];
@@ -56,6 +78,8 @@ export default function Crews() {
   const [addOpen, setAddOpen] = useState(false);
   const [categoryName, setCategoryName] = useState('');
   const [parentId, setParentId] = useState<string | undefined>();
+  const [deleteCrewId, setDeleteCrewId] = useState<number | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: categoriesResp, isLoading: categoriesLoading } = useCategoriesQuery(1, 100);
@@ -99,6 +123,25 @@ export default function Crews() {
       toast({ title: 'Error', description: msg });
     },
   });
+
+  const deleteCrewMutation = useDeleteCrewMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crews'] });
+      setIsDeleteDialogOpen(false);
+      setDeleteCrewId(null);
+      toast({
+        title: 'Success',
+        description: 'Crew deleted successfully',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete crew',
+        variant: 'destructive',
+      });
+    },
+  });
   const updateCrewMutation = useUpdateCrewMutation({
     onSuccess: (res) => {
       const apiCrew = res.data;
@@ -120,6 +163,22 @@ export default function Crews() {
       toast({ title: 'Error', description: msg });
     },
   });
+
+  const handleDeleteClick = (crewId: number) => {
+    setDeleteCrewId(crewId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteCrewId) {
+      deleteCrewMutation.mutate(deleteCrewId);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setIsDeleteDialogOpen(false);
+    setDeleteCrewId(null);
+  };
   const createCategoryMutation = useCreateCategoryMutation({
     onSuccess: () => {
       toast({ title: 'Category created', description: 'The category has been added.' });
@@ -246,21 +305,22 @@ export default function Crews() {
             size="icon"
             className="h-6 w-6 ml-auto opacity-0 group-hover:opacity-100"
             onClick={(e) => {
-              e.stopPropagation();
-              setAddMemberFolderId(folder.id);
-              // The folder.id is the category ID. We can use it directly.
-              const catId = Number(folder.id);
-              setSelectedCategoryId(Number.isFinite(catId) ? catId : null);
-              setDialogMode('create');
-              setEditingMember({
-                id: '',
-                name: '',
-                role: '',
-                order: 0,
-                contactInfo: { email: '', phone: '' }
-              });
-            }}
-          >
+                    e.stopPropagation();
+                    setAddMemberFolderId(folder.id);
+                    // The folder.id is the category ID. We can use it directly.
+                    const catId = Number(folder.id);
+                    setSelectedCategoryId(Number.isFinite(catId) ? catId : null);
+                    setDialogMode('create');
+                    setEditingMember({
+                      id: '',
+                      name: '',
+                      role: '',
+                      order: 0,
+                      contactInfo: { email: '', phone: '' }
+                    });
+                  }}
+                  disabled={deleteCrewMutation.isPending || createCrewMutation.isPending}
+                >
             <Plus className="h-3 w-3" />
           </Button>
         </div>
@@ -277,8 +337,10 @@ export default function Crews() {
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDropOnFolder(e, folder.id, index)}
                 onClick={() => {
-                  setDialogMode('edit');
-                  setEditingMember(member);
+                  if (!deleteCrewMutation.isPending && !createCrewMutation.isPending) {
+                    setDialogMode('edit');
+                    setEditingMember(member);
+                  }
                 }}
               >
                 <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
@@ -289,6 +351,18 @@ export default function Crews() {
                   <p className="text-xs text-muted-foreground">{member.role}</p>
                 </div>
                 <div className="text-xs text-muted-foreground hidden md:block">{member.contactInfo.phone}</div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteClick(Number(member.id));
+                  }}
+                  disabled={deleteCrewMutation.isPending}
+                >
+                  <Trash2 className="h-3 w-3 text-destructive" />
+                </Button>
               </div>
             ))}
             {children.map(childFolder => renderFolder(childFolder, depth + 1))}
@@ -371,6 +445,27 @@ export default function Crews() {
         onSave={handleMemberSave}
         mode={dialogMode}
       />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this crew member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the crew member and remove them from all associated categories.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDeleteCancel}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteCrewMutation.isPending}
+            >
+              {deleteCrewMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }

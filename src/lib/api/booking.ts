@@ -11,10 +11,17 @@ type BookingApiItem = {
   guest_name?: string;
   check_in?: string;
   check_out?: string;
+  check_in_date?: string;
+  check_out_date?: string;
   nights?: number;
   reservation_status?: string;
   payment_status?: string;
   total_amount?: number;
+  property_id?: string;
+  number_of_guests?: number;
+  guest_email?: string;
+  guest_phone?: string;
+  
 };
 
 type BookingApiResponse = {
@@ -23,6 +30,7 @@ type BookingApiResponse = {
   timestamp?: string;
   data: {
     bookings: BookingApiItem[];
+    vendorTasks: VendorTask[];
     page: number;
     limit: number;
     total: number;
@@ -71,7 +79,7 @@ export function toViewBooking(b: BookingApiItem): ViewBooking {
 }
 
 // Transform API booking to calendar booking format
-export function toCalendarBooking(apiBooking: any): CalendarBooking {
+export function toCalendarBooking(apiBooking: BookingApiItem): CalendarBooking {
   const platform = apiBooking.platform?.toLowerCase() || 'unknown';
   const normalizedPlatform = platform === 'booking.com' ? 'booking' : platform;
   
@@ -94,17 +102,25 @@ export function toCalendarBooking(apiBooking: any): CalendarBooking {
 }
 
 // Transform API task to vendor task format
-export function toVendorTask(apiTask: any, bookingId: string, propertyName?: string): VendorTask {
+export function toVendorTask(apiTask: {
+  task_id: string;
+  scheduled_date?: string;
+  scheduledTime?: string;
+  crews?: {
+    property_id?: string;
+    name?: string;
+  };
+}, bookingId: string, propertyName?: string): VendorTask {
   return {
     id: `task-${apiTask.task_id}`,
     bookingId: bookingId,
     propertyId: apiTask.crews?.property_id || 'unknown',
     propertyName: propertyName || 'Unknown Property',
     vendorName: apiTask.crews?.name || 'Unknown Vendor',
-    type: 'cleaning', // Default type as API doesn't provide this
+    type: 'cleaning',
     scheduledTime: new Date(apiTask.scheduled_date || apiTask.scheduledTime),
-    duration: 60, // Default duration
-    status: 'scheduled', // Default status
+    duration: 60,
+    status: 'scheduled',
     notes: '',
   };
 }
@@ -135,9 +151,17 @@ export function useCalendarBookingsQuery(page = 1, limit = 50, options?: QueryOp
       
       // Extract and transform vendor tasks from all bookings
       const vendorTasks: VendorTask[] = [];
-      data.data.bookings.forEach((booking: any) => {
+      data.data.bookings.forEach((booking: BookingApiItem & { tasks?: Array<{
+        task_id: string;
+        scheduled_date?: string;
+        scheduledTime?: string;
+        crews?: {
+          property_id?: string;
+          name?: string;
+        };
+      }> }) => {
         if (booking.tasks && Array.isArray(booking.tasks)) {
-          booking.tasks.forEach((task: any) => {
+          booking.tasks.forEach((task) => {
             vendorTasks.push(toVendorTask(task, booking.reservation_id, booking.property_name));
           });
         }

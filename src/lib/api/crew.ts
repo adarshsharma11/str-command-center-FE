@@ -62,6 +62,10 @@ async function updateCrew(id: number, payload: UpdateCrewPayload): Promise<ApiRe
   return apiClient.patch<ApiResponse<CrewApiItem>>(`${ENDPOINTS.CREWS.LIST}/${id}`, payload);
 }
 
+async function deleteCrew(id: number): Promise<ApiResponse<void>> {
+  return apiClient.delete<ApiResponse<void>>(`${ENDPOINTS.CREWS.LIST}/${id}`);
+}
+
 export function useCreateCrewMutation(options?: MutationOptions<ApiResponse<CrewApiItem>, Error, CreateCrewPayload>) {
   return useMutation<ApiResponse<CrewApiItem>, Error, CreateCrewPayload>({
     mutationKey: ['crews', 'create'],
@@ -74,6 +78,14 @@ export function useUpdateCrewMutation(options?: MutationOptions<ApiResponse<Crew
   return useMutation<ApiResponse<CrewApiItem>, Error, { id: number; data: UpdateCrewPayload }>({
     mutationKey: ['crews', 'update'],
     mutationFn: ({ id, data }) => updateCrew(id, data),
+    ...options,
+  });
+}
+
+export function useDeleteCrewMutation(options?: MutationOptions<ApiResponse<void>, Error, number>) {
+  return useMutation<ApiResponse<void>, Error, number>({
+    mutationKey: ['crews', 'delete'],
+    mutationFn: (id) => deleteCrew(id),
     ...options,
   });
 }

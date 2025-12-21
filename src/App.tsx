@@ -15,6 +15,9 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/context/AuthContext";
 import PrivateRoute from "@/components/PrivateRoute";
+import PublicRoute from "@/components/PublicRoute";
+
+
 
 const queryClient = new QueryClient();
 
@@ -27,7 +30,9 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Navigate to="/auth" replace />} />
-            <Route path="/auth" element={<Auth />} />
+            <Route element={<PublicRoute />}>
+              <Route path="/auth" element={<Auth />} />
+            </Route>
             <Route element={<PrivateRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/calendar" element={<Calendar />} />

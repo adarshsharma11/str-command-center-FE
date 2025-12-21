@@ -43,7 +43,6 @@ export default function Calendar() {
   
   // Fetch properties from API
   const { data: propertiesData, isLoading: isLoadingProperties, error: propertiesError } = usePropertiesQuery(1, 50);
-
   // Transform API bookings to calendar format
   const apiBookings = useMemo(() => {
     if (!bookingsData?.bookings) return [];

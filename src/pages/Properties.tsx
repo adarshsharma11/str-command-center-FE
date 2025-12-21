@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,12 +8,52 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Link2, ExternalLink } from 'lucide-react';
 import { PropertiesPageSkeleton } from '@/components/skeletons/PropertiesListSkeleton';
-import { usePropertiesQuery, propertyMappers, type PropertyView, type PropertyListingView } from '@/lib/api/property';
+import { usePropertiesQuery, propertyMappers, useCreatePropertyMutation, createPropertySchema, type PropertyView, type PropertyListingView, type CreatePropertyFormData } from '@/lib/api/property';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function Properties() {
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<CreatePropertyFormData>({
+    resolver: yupResolver(createPropertySchema),
+    defaultValues: {
+      name: '',
+      address: '',
+      status: 'active',
+      airbnb_id: '',
+      vrbo_id: '',
+      booking_id: '',
+    },
+  });
+
+  const createPropertyMutation = useCreatePropertyMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Property created successfully',
+        description: 'Your new property has been added to the system.',
+      });
+      setIsCreateDialogOpen(false);
+      reset();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error creating property',
+        description: error.message || 'Failed to create property. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const page = 1;
   const limit = 10;
@@ -28,6 +70,17 @@ export default function Properties() {
     Active: 'bg-green-500 text-white',
     Inactive: 'bg-muted text-muted-foreground',
     Maintenance: 'bg-orange-500 text-white',
+  };
+
+  const onSubmit = (data: CreatePropertyFormData) => {
+    createPropertyMutation.mutate({
+      name: data.name,
+      address: data.address,
+      status: data.status,
+      airbnb_id: data.airbnb_id || undefined,
+      vrbo_id: data.vrbo_id || undefined,
+      booking_id: data.booking_id || undefined,
+    });
   };
 
   const syncStatusColors = {
@@ -47,7 +100,7 @@ export default function Properties() {
               <h1 className="text-3xl font-bold text-foreground">Properties</h1>
               <p className="text-muted-foreground">Manage your rental properties</p>
             </div>
-            <Dialog>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="gap-2">
                   <Plus className="h-4 w-4" />
@@ -55,49 +108,115 @@ export default function Properties() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add New Property</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="property-name">Property Name</Label>
-                    <Input id="property-name" placeholder="Enter property name" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="property-address">Address</Label>
-                    <Input id="property-address" placeholder="Enter property address" />
-                  </div>
-                  <div className="space-y-3">
-                    <Label>Platform Listing IDs</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Enter the unique listing ID for each platform to link them to this property
-                    </p>
-                    <div className="grid gap-3">
-                      <div className="flex items-center gap-3">
-                        <Label htmlFor="airbnb-id" className="w-32 text-right">Airbnb</Label>
-                        <Input id="airbnb-id" placeholder="Airbnb listing ID" />
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Label htmlFor="vrbo-id" className="w-32 text-right">Vrbo</Label>
-                        <Input id="vrbo-id" placeholder="Vrbo listing ID" />
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Label htmlFor="booking-id" className="w-32 text-right">Booking.com</Label>
-                        <Input id="booking-id" placeholder="Booking.com listing ID" />
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Label htmlFor="direct-id" className="w-32 text-right">Direct Website</Label>
-                        <Input id="direct-id" placeholder="Direct booking ID" />
+                <form onSubmit={handleSubmit(onSubmit)}>
+                  <DialogHeader>
+                    <DialogTitle>Add New Property</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Property Name</Label>
+                      <Input 
+                        id="name" 
+                        placeholder="Enter property name" 
+                        {...register('name')}
+                        className={errors.name ? 'border-destructive' : ''}
+                      />
+                      {errors.name && (
+                        <p className="text-sm text-destructive">{errors.name.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Input 
+                        id="address" 
+                        placeholder="Enter property address" 
+                        {...register('address')}
+                        className={errors.address ? 'border-destructive' : ''}
+                      />
+                      {errors.address && (
+                        <p className="text-sm text-destructive">{errors.address.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status</Label>
+                      <Select 
+                        onValueChange={(value) => setValue('status', value as "active" | "inactive" | "maintenance")}
+                        defaultValue="active"
+                      >
+                        <SelectTrigger id="status" className={errors.status ? 'border-destructive' : ''}>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.status && (
+                        <p className="text-sm text-destructive">{errors.status.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      <Label>Platform Listing IDs</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Enter the unique listing ID for each platform to link them to this property
+                      </p>
+                      <div className="grid gap-3">
+                        <div className="flex items-center gap-3">
+                          <Label htmlFor="airbnb_id" className="w-32 text-right">Airbnb</Label>
+                          <Input 
+                            id="airbnb_id" 
+                            placeholder="Airbnb listing ID" 
+                            {...register('airbnb_id')}
+                            className={errors.airbnb_id ? 'border-destructive' : ''}
+                          />
+                        </div>
+                        {errors.airbnb_id && (
+                          <p className="text-sm text-destructive ml-36">{errors.airbnb_id.message}</p>
+                        )}
+                        <div className="flex items-center gap-3">
+                          <Label htmlFor="vrbo_id" className="w-32 text-right">Vrbo</Label>
+                          <Input 
+                            id="vrbo_id" 
+                            placeholder="Vrbo listing ID" 
+                            {...register('vrbo_id')}
+                            className={errors.vrbo_id ? 'border-destructive' : ''}
+                          />
+                        </div>
+                        {errors.vrbo_id && (
+                          <p className="text-sm text-destructive ml-36">{errors.vrbo_id.message}</p>
+                        )}
+                        <div className="flex items-center gap-3">
+                          <Label htmlFor="booking_id" className="w-32 text-right">Booking.com</Label>
+                          <Input 
+                            id="booking_id" 
+                            placeholder="Booking.com listing ID" 
+                            {...register('booking_id')}
+                            className={errors.booking_id ? 'border-destructive' : ''}
+                          />
+                        </div>
+                        {errors.booking_id && (
+                          <p className="text-sm text-destructive ml-36">{errors.booking_id.message}</p>
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-4">
-                    <DialogTrigger asChild>
-                      <Button variant="outline">Cancel</Button>
-                    </DialogTrigger>
-                    <Button>Create Property</Button>
+                    <Button 
+                      type="button"
+                      variant="outline" 
+                      onClick={() => setIsCreateDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit"
+                      disabled={isSubmitting || createPropertyMutation.isPending}
+                    >
+                      {isSubmitting || createPropertyMutation.isPending ? 'Creating...' : 'Create Property'}
+                    </Button>
                   </div>
-                </div>
+                </form>
               </DialogContent>
             </Dialog>
           </div>
