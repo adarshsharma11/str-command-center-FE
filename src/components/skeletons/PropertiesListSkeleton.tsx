@@ -4,7 +4,7 @@ export function PropertyCardSkeleton() {
   return (
     <div className="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-lg transition-shadow">
       <div className="flex flex-col space-y-1.5 p-6">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-2">
           <SkeletonLoader variant="text" className="h-7 w-40" />
           <SkeletonLoader variant="rect" className="h-6 w-20 rounded-full" />
         </div>

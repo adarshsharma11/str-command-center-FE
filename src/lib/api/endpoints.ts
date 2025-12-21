@@ -17,5 +17,11 @@ export const ENDPOINTS = {
   },
   CREWS: {
     LIST: `${API_PREFIX}/crews`,
-  }
+  },
+  INTEGRATIONS: {
+    LIST: `${API_PREFIX}/users`,
+    CONNECT: `${API_PREFIX}/users/:email/connect`,
+    TEST: `${API_PREFIX}/users/:email/test`,
+    DISCONNECT: `${API_PREFIX}/users/integrations/:platform`,
+  },
 } as const;
