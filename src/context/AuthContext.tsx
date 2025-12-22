@@ -8,7 +8,7 @@ import { useLoginMutation, useRegisterMutation, type LoginCredentials, type Regi
 // This allows testing the app without needing backend servers running
 // TODO: Your coders can toggle this or use an env variable
 // ============================================================
-const DEV_MODE_BYPASS_AUTH = true;
+const DEV_MODE_BYPASS_AUTH = false;
 
 type AuthContextValue = {
   token: string | null;
