@@ -8,7 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Calendar, Clock, User, Home, Mail, Phone, Plus, Trash2, Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, User, Home, Mail, Phone, Plus, Trash2, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { fetchServiceCategories, useServiceCategoriesQuery, type ServiceCategory } from '@/lib/api/service-category';
+import { useAllPropertiesQuery } from '@/lib/api/property';
+import { apiClient } from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
+import { env } from '@/config/env';
+import { getToken } from '@/lib/auth/token';
 
 // ============================================================
 // TESTING PAGE
@@ -17,6 +23,14 @@ import { Calendar, Clock, User, Home, Mail, Phone, Plus, Trash2, Send, CheckCirc
 // crew notifications, service provider notifications)
 // 
 // TODO: Your coders will need to hook these up to actual APIs
+// 
+// RECENT UPDATES:
+// - Added email and phone fields to Service Category API
+// - Service categories now support contact information
+// - Replaced MOCK_SERVICES with real Service Category API
+// - Service selection now uses actual service categories from backend
+// - Added Total Amount and Number of Guests fields to form
+// - Form now captures all payload fields for complete booking testing
 // ============================================================
 
 // ============================================================
@@ -37,6 +51,8 @@ type TestBooking = {
   guestEmail: string;
   guestPhone: string;
   guestName: string;
+  totalAmount: string;
+  numberOfGuests: string;
   additionalServices: AdditionalService[];
 };
 
@@ -48,15 +64,6 @@ const MOCK_PROPERTIES = [
   { id: 'prop-2', name: 'Mountain Retreat' },
   { id: 'prop-3', name: 'Downtown Loft' },
   { id: 'prop-4', name: 'Beachfront Bungalow' },
-];
-
-const MOCK_SERVICES = [
-  { id: 'service-chef', name: 'Private Chef', defaultDuration: '3 hours' },
-  { id: 'service-massage', name: 'Massage Therapy', defaultDuration: '1 hour' },
-  { id: 'service-transport', name: 'Airport Transfer', defaultDuration: '1 hour' },
-  { id: 'service-concierge', name: 'Concierge Service', defaultDuration: '2 hours' },
-  { id: 'service-bartender', name: 'Bartender', defaultDuration: '4 hours' },
-  { id: 'service-photography', name: 'Photography Session', defaultDuration: '2 hours' },
 ];
 
 const BOOKING_SOURCES = [
@@ -72,7 +79,7 @@ const BOOKING_SOURCES = [
 type LogEntry = {
   id: string;
   timestamp: Date;
-  type: 'calendar' | 'guest-message' | 'crew-message' | 'service-message';
+  type: 'calendar' | 'guest-message' | 'crew-message' | 'service-message' | 'database' | 'system';
   status: 'success' | 'pending' | 'error';
   message: string;
   details?: string;
@@ -90,11 +97,163 @@ export default function Testing() {
     guestEmail: '',
     guestPhone: '',
     guestName: '',
+    totalAmount: '',
+    numberOfGuests: '',
     additionalServices: [],
   });
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // API Test State
+  const [fetchedCategories, setFetchedCategories] = useState<ServiceCategory[] | null>(null);
+  const [isFetchingCategories, setIsFetchingCategories] = useState(false);
+  const [bookingTestResult, setBookingTestResult] = useState<unknown>(null);
+  const [isCreatingBooking, setIsCreatingBooking] = useState(false);
+
+  const handleTestFetchCategories = async () => {
+    setIsFetchingCategories(true);
+    try {
+      const res = await fetchServiceCategories();
+      if (res.success) {
+        setFetchedCategories(res.data);
+        toast.success(`Fetched ${res.data.length} categories`);
+      } else {
+        toast.error(res.message || 'Failed to fetch');
+      }
+    } catch (err) {
+      toast.error('Error fetching categories');
+    } finally {
+      setIsFetchingCategories(false);
+    }
+  };
+
+  const handleTestCreateBooking = async () => {
+    setIsCreatingBooking(true);
+    setLogs([]); // Clear logs for new test
+
+    // Get property name
+    const propertyName = properties.find(p => String(p.id) === booking.propertyId)?.name || 
+                        MOCK_PROPERTIES.find(p => p.id === booking.propertyId)?.name || 
+                        'Test Property';
+
+    // Map services from the form
+    const services = booking.additionalServices.map(s => ({
+      service_id: parseInt(s.serviceType) || 1, // Fallback to 1 if not a valid number, as API expects number
+      service_date: s.date ? `${s.date}T${s.time || '09:00'}:00` : "2024-01-02T09:00:00",
+      time: s.time || "09:00"
+    }));
+
+    // Construct payload using form data, falling back to defaults if empty
+    const payload = { 
+      "reservation_id": String(Date.now()), 
+      "platform": booking.bookingSource || "airbnb", 
+      "guest_name": booking.guestName || "Test Guest", 
+      "check_in_date": booking.checkInDate ? `${booking.checkInDate}T14:00:00` : "2024-01-01T14:00:00", 
+      "check_out_date": booking.checkOutDate ? `${booking.checkOutDate}T11:00:00` : "2024-01-05T11:00:00", 
+      "services": services.length > 0 ? services : [ 
+        { 
+          "service_id": 1, 
+          "service_date": "2024-01-02T09:00:00", 
+          "time": "09:00" 
+        } 
+      ], 
+      "guest_phone": booking.guestPhone || "123-456-7890", 
+      "guest_email": booking.guestEmail || "test@example.com", 
+      "property_id": booking.propertyId || "prop-123", 
+      "property_name": propertyName, 
+      "number_of_guests": parseInt(booking.numberOfGuests) || 2, 
+      "total_amount": parseFloat(booking.totalAmount) || 100.0, 
+      "currency": "USD" 
+    };
+
+    const mapStepToType = (step: string): LogEntry['type'] => {
+      switch (step) {
+        case 'database': return 'database';
+        case 'calendar': return 'calendar';
+        case 'guest_notification': return 'guest-message';
+        case 'crew_notification': return 'crew-message';
+        case 'services': return 'service-message';
+        case 'complete': return 'system';
+        default: return 'system';
+      }
+    };
+
+    try {
+      const token = getToken();
+      const response = await fetch(`${env.apiBaseUrl}${ENDPOINTS.BOOKING.LIST}?stream=true`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        setBookingTestResult(errorData);
+        throw new Error(errorData.detail?.message || errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Response body is not readable');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        // Keep the last partial line in the buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            
+            // Map API response to LogEntry
+            const logEntry: LogEntry = {
+              id: `log-${Date.now()}-${Math.random()}`,
+              timestamp: new Date(),
+              type: mapStepToType(data.step),
+              status: data.status === 'completed' || data.status === 'success' ? 'success' : 'error',
+              message: data.message || `Step ${data.step} ${data.status}`,
+              details: data.step === 'complete' ? undefined : JSON.stringify(data, null, 2)
+            };
+
+            setLogs(prev => [...prev, logEntry]);
+            
+            // If complete, set the final result
+            if (data.step === 'complete') {
+              setBookingTestResult(data);
+              toast.success('Test booking completed successfully');
+            }
+          } catch (e) {
+            console.error('Error parsing JSON line:', line, e);
+          }
+        }
+      }
+      
+    } catch (err) {
+      toast.error('Error creating test booking');
+      setBookingTestResult({ error: err instanceof Error ? err.message : 'Unknown error' });
+    } finally {
+      setIsCreatingBooking(false);
+    }
+  };
+
+  const { data: propertiesData, isLoading: isLoadingProperties } = useAllPropertiesQuery();
+  const properties = (Array.isArray(propertiesData?.data) ? propertiesData.data : propertiesData?.data?.data) || [];
+
+  // Fetch service categories for service selection
+  const { data: serviceCategoriesData, isLoading: isLoadingServiceCategories } = useServiceCategoriesQuery();
+  const serviceCategories = serviceCategoriesData?.data || [];
 
   // ============================================================
   // HANDLERS - Form updates
@@ -147,7 +306,9 @@ export default function Testing() {
     setIsSubmitting(true);
     setLogs([]); // Clear previous logs
 
-    const propertyName = MOCK_PROPERTIES.find(p => p.id === booking.propertyId)?.name || 'Unknown Property';
+    const propertyName = properties.find(p => String(p.id) === booking.propertyId)?.name || 
+                        MOCK_PROPERTIES.find(p => p.id === booking.propertyId)?.name || 
+                        'Unknown Property';
 
     try {
       // ============================================================
@@ -206,7 +367,7 @@ export default function Testing() {
       // ============================================================
       for (const service of booking.additionalServices) {
         if (service.serviceType && service.date && service.time) {
-          const serviceName = MOCK_SERVICES.find(s => s.id === service.serviceType)?.name || 'Service';
+          const serviceName = serviceCategories.find(c => String(c.id) === service.serviceType)?.category_name || 'Service';
           
           addLog({
             type: 'service-message',
@@ -268,20 +429,22 @@ export default function Testing() {
     ));
   };
 
+  const getLogTypeLabel = (type: LogEntry['type']) => {
+    switch (type) {
+      case 'calendar': return 'Calendar';
+      case 'guest-message': return 'Guest Comm';
+      case 'crew-message': return 'Crew Comm';
+      case 'service-message': return 'Service Provider';
+      case 'database': return 'Database';
+      case 'system': return 'System';
+      default: return type;
+    }
+  };
+
   const getLogIcon = (log: LogEntry) => {
     if (log.status === 'success') return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     if (log.status === 'error') return <AlertCircle className="h-4 w-4 text-destructive" />;
     return <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />;
-  };
-
-  const getLogTypeLabel = (type: LogEntry['type']) => {
-    switch (type) {
-      case 'calendar': return 'Calendar';
-      case 'guest-message': return 'Guest';
-      case 'crew-message': return 'Crew';
-      case 'service-message': return 'Service';
-      default: return 'Unknown';
-    }
   };
 
   // ============================================================
@@ -336,14 +499,22 @@ export default function Testing() {
                 </Label>
                 <Select value={booking.propertyId} onValueChange={(v) => updateBooking('propertyId', v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select property" />
+                    <SelectValue placeholder={isLoadingProperties ? "Loading properties..." : "Select property"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {MOCK_PROPERTIES.map(property => (
-                      <SelectItem key={property.id} value={property.id}>
-                        {property.name}
-                      </SelectItem>
-                    ))}
+                    {properties.length > 0 ? (
+                      properties.map(property => (
+                        <SelectItem key={property.id} value={String(property.id)}>
+                          {property.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      MOCK_PROPERTIES.map(property => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.name} (Mock)
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -408,6 +579,30 @@ export default function Testing() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Number of Guests</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={booking.numberOfGuests}
+                    onChange={(e) => updateBooking('numberOfGuests', e.target.value)}
+                    placeholder="2"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Total Amount (USD)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={booking.totalAmount}
+                    onChange={(e) => updateBooking('totalAmount', e.target.value)}
+                    placeholder="100.00"
+                  />
+                </div>
+              </div>
+
               <Separator />
 
               {/* Additional Services */}
@@ -451,11 +646,19 @@ export default function Testing() {
                             <SelectValue placeholder="Select service" />
                           </SelectTrigger>
                           <SelectContent>
-                            {MOCK_SERVICES.map(s => (
-                              <SelectItem key={s.id} value={s.id}>
-                                {s.name} ({s.defaultDuration})
-                              </SelectItem>
-                            ))}
+                            {isLoadingServiceCategories ? (
+                              <SelectItem value="" disabled>Loading services...</SelectItem>
+                            ) : serviceCategories.length > 0 ? (
+                              serviceCategories.map(category => (
+                                <SelectItem key={category.id} value={String(category.id)}>
+                                  {category.category_name} 
+                                  {category.time && ` (${category.time})`}
+                                  {category.price && ` - $${category.price}`}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="" disabled>No services available</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -567,6 +770,53 @@ export default function Testing() {
             </CardContent>
           </Card>
         </div>
+
+        {/* API Tests */}
+        <Card>
+          <CardHeader>
+            <CardTitle>API Tests</CardTitle>
+            <CardDescription>Directly test API endpoints</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="font-medium">GET /service-categories</h3>
+                  <p className="text-sm text-muted-foreground">Fetch all service categories</p>
+                </div>
+                <Button onClick={handleTestFetchCategories} disabled={isFetchingCategories}>
+                  {isFetchingCategories && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Fetch Categories
+                </Button>
+              </div>
+
+              {fetchedCategories && (
+                <div className="mt-4 p-4 bg-muted rounded-md overflow-auto max-h-60">
+                  <pre className="text-xs">{JSON.stringify(fetchedCategories, null, 2)}</pre>
+                </div>
+              )}
+
+              <Separator className="my-4" />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="font-medium">POST /api/v1/bookings</h3>
+                  <p className="text-sm text-muted-foreground">Create a test booking using form data above</p>
+                </div>
+                <Button onClick={handleTestCreateBooking} disabled={isCreatingBooking}>
+                  {isCreatingBooking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Booking (from Form)
+                </Button>
+              </div>
+
+              {bookingTestResult && (
+                <div className="mt-4 p-4 bg-muted rounded-md overflow-auto max-h-60">
+                  <pre className="text-xs">{JSON.stringify(bookingTestResult, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );

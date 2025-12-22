@@ -92,6 +92,15 @@ export function usePropertiesQuery(page = 1, limit = 10, options?: QueryOptions<
   });
 }
 
+export function useAllPropertiesQuery(options?: QueryOptions<PropertyListResponse>) {
+  return useQuery<PropertyListResponse>({
+    queryKey: ['properties', 'all'],
+    queryFn: () => fetchProperties(1, 100),
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
 // Create Property
 export type CreatePropertyPayload = {
   name: string;
