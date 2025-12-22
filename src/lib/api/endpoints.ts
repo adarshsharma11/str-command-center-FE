@@ -18,6 +18,11 @@ export const ENDPOINTS = {
   CREWS: {
     LIST: `${API_PREFIX}/crews`,
   },
+  SERVICE_CATEGORIES: {
+    LIST: `${API_PREFIX}/service-categories`,
+    DETAIL: `${API_PREFIX}/service-categories/:id`,
+    STATUS: `${API_PREFIX}/service-categories/:id/status`,
+  },
   INTEGRATIONS: {
     LIST: `${API_PREFIX}/users`,
     CONNECT: `${API_PREFIX}/users/:email/connect`,

@@ -8,7 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Calendar, Clock, User, Home, Mail, Phone, Plus, Trash2, Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, User, Home, Mail, Phone, Plus, Trash2, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { fetchServiceCategories, type ServiceCategory } from '@/lib/api/service-category';
+import { useAllPropertiesQuery } from '@/lib/api/property';
 
 // ============================================================
 // TESTING PAGE
@@ -96,6 +98,30 @@ export default function Testing() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // API Test State
+  const [fetchedCategories, setFetchedCategories] = useState<ServiceCategory[] | null>(null);
+  const [isFetchingCategories, setIsFetchingCategories] = useState(false);
+
+  const handleTestFetchCategories = async () => {
+    setIsFetchingCategories(true);
+    try {
+      const res = await fetchServiceCategories();
+      if (res.success) {
+        setFetchedCategories(res.data);
+        toast.success(`Fetched ${res.data.length} categories`);
+      } else {
+        toast.error(res.message || 'Failed to fetch');
+      }
+    } catch (err) {
+      toast.error('Error fetching categories');
+    } finally {
+      setIsFetchingCategories(false);
+    }
+  };
+
+  const { data: propertiesData, isLoading: isLoadingProperties } = useAllPropertiesQuery();
+  const properties = (Array.isArray(propertiesData?.data) ? propertiesData.data : propertiesData?.data?.data) || [];
+
   // ============================================================
   // HANDLERS - Form updates
   // ============================================================
@@ -147,7 +173,9 @@ export default function Testing() {
     setIsSubmitting(true);
     setLogs([]); // Clear previous logs
 
-    const propertyName = MOCK_PROPERTIES.find(p => p.id === booking.propertyId)?.name || 'Unknown Property';
+    const propertyName = properties.find(p => String(p.id) === booking.propertyId)?.name || 
+                        MOCK_PROPERTIES.find(p => p.id === booking.propertyId)?.name || 
+                        'Unknown Property';
 
     try {
       // ============================================================
@@ -336,14 +364,22 @@ export default function Testing() {
                 </Label>
                 <Select value={booking.propertyId} onValueChange={(v) => updateBooking('propertyId', v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select property" />
+                    <SelectValue placeholder={isLoadingProperties ? "Loading properties..." : "Select property"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {MOCK_PROPERTIES.map(property => (
-                      <SelectItem key={property.id} value={property.id}>
-                        {property.name}
-                      </SelectItem>
-                    ))}
+                    {properties.length > 0 ? (
+                      properties.map(property => (
+                        <SelectItem key={property.id} value={String(property.id)}>
+                          {property.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      MOCK_PROPERTIES.map(property => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.name} (Mock)
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -567,6 +603,34 @@ export default function Testing() {
             </CardContent>
           </Card>
         </div>
+
+        {/* API Tests */}
+        <Card>
+          <CardHeader>
+            <CardTitle>API Tests</CardTitle>
+            <CardDescription>Directly test API endpoints</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="font-medium">GET /service-categories</h3>
+                  <p className="text-sm text-muted-foreground">Fetch all service categories</p>
+                </div>
+                <Button onClick={handleTestFetchCategories} disabled={isFetchingCategories}>
+                  {isFetchingCategories && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Fetch Categories
+                </Button>
+              </div>
+
+              {fetchedCategories && (
+                <div className="mt-4 p-4 bg-muted rounded-md overflow-auto max-h-60">
+                  <pre className="text-xs">{JSON.stringify(fetchedCategories, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );

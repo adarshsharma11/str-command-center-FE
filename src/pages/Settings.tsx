@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Loader2, Pencil } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,14 +10,12 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ServiceCategoryDialog } from '@/components/settings/ServiceCategoryDialog';
+import { 
+  useServiceCategoriesQuery, 
+  useUpdateServiceCategoryStatusMutation,
+  type ServiceCategory
+} from '@/lib/api/service-category';
 import { PlatformConfigModal } from '@/components/integrations/PlatformConfigModal';
 import { 
   useConnectIntegrationMutation, 
@@ -33,9 +32,19 @@ export default function Settings() {
   const [selectedPlatform, setSelectedPlatform] = useState<{ platform: PlatformType; name: string } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-  const [customServices, setCustomServices] = useState<Array<{ name: string; price: string; enabled: boolean }>>([]);
-  const [newServiceName, setNewServiceName] = useState('');
-  const [newServicePrice, setNewServicePrice] = useState('');
+  const [editingCategory, setEditingCategory] = useState<ServiceCategory | null>(null);
+  
+  const { data: serviceCategoriesData, isLoading: isLoadingServices } = useServiceCategoriesQuery();
+  const updateServiceStatusMutation = useUpdateServiceCategoryStatusMutation({
+    onSuccess: () => {
+      toast({ title: 'Status updated', description: 'Service category status has been updated.' });
+      queryClient.invalidateQueries({ queryKey: ['service-categories'] });
+    },
+    onError: (err) => {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  });
+
   const [connectedPlatforms, setConnectedPlatforms] = useState<Record<PlatformType, { status: 'connected' | 'not_connected'; email?: string }>>({
     airbnb: { status: 'not_connected' },
     vrbo: { status: 'not_connected' },
@@ -163,25 +172,7 @@ export default function Settings() {
     setIsModalOpen(true);
   };
 
-  const handleAddCustomService = () => {
-    if (!newServiceName.trim() || !newServicePrice.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please fill in all fields',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setCustomServices(prev => [...prev, { name: newServiceName.trim(), price: newServicePrice.trim(), enabled: true }]);
-    setNewServiceName('');
-    setNewServicePrice('');
-    setIsServiceModalOpen(false);
-    toast({
-      title: 'Success',
-      description: 'Custom service added successfully',
-    });
-  };
+
 
   return (
     <Layout>
@@ -264,46 +255,67 @@ export default function Settings() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {[
-                      { name: 'Private Chef', defaultPrice: '$850' },
-                      { name: 'Bartender Service', defaultPrice: '$450' },
-                      { name: 'Massage Therapy', defaultPrice: '$200' },
-                      { name: 'Concierge Service', defaultPrice: '$150' },
-                      { name: 'Transportation', defaultPrice: '$300' },
-                      { name: 'Photography', defaultPrice: '$500' },
-                    ].map((service) => (
-                      <div key={service.name}>
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <p className="font-medium text-foreground">{service.name}</p>
-                            <p className="text-sm text-muted-foreground">Base rate: {service.defaultPrice}</p>
+                    {isLoadingServices ? (
+                       <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
+                    ) : (
+                      <>
+                        {serviceCategoriesData?.data?.map((service) => (
+                          <div key={service.id}>
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-foreground">{service.category_name}</p>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6" 
+                                    onClick={() => {
+                                      setEditingCategory(service);
+                                      setIsServiceModalOpen(true);
+                                    }}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {service.price ? `Base rate: $${service.price}` : 'No base rate'}
+                                  {service.time && ` • ${service.time}`}
+                                </p>
+                              </div>
+                              <Switch 
+                                checked={service.status} 
+                                onCheckedChange={(checked) => updateServiceStatusMutation.mutate({ id: service.id, isActive: checked })}
+                              />
+                            </div>
+                            <Separator />
                           </div>
-                          <Switch defaultChecked />
-                        </div>
-                        <Separator />
-                      </div>
-                    ))}
-                    {customServices.map((service, index) => (
-                      <div key={`custom-${index}`}>
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <p className="font-medium text-foreground">{service.name}</p>
-                            <p className="text-sm text-muted-foreground">Base rate: {service.price}</p>
+                        ))}
+                        
+                        {!serviceCategoriesData?.data?.length && (
+                          <div className="text-center py-4 text-muted-foreground">
+                            No service categories found. Add one to get started.
                           </div>
-                          <Switch defaultChecked={service.enabled} />
-                        </div>
-                        <Separator />
-                      </div>
-                    ))}
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => setIsServiceModalOpen(true)}
-                    >
-                      Add Custom Service
-                    </Button>
+                        )}
+
+                        <Button 
+                          variant="outline" 
+                          className="w-full mt-4"
+                          onClick={() => {
+                            setEditingCategory(null);
+                            setIsServiceModalOpen(true);
+                          }}
+                        >
+                          Add Service Category
+                        </Button>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
+                <ServiceCategoryDialog 
+                  open={isServiceModalOpen} 
+                  onOpenChange={setIsServiceModalOpen}
+                  categoryToEdit={editingCategory}
+                />
               </TabsContent>
 
               <TabsContent value="integrations" className="space-y-4 mt-6">
@@ -441,45 +453,7 @@ export default function Settings() {
         />
       )}
 
-      {/* Custom Service Modal */}
-      <Dialog open={isServiceModalOpen} onOpenChange={setIsServiceModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Custom Service</DialogTitle>
-            <DialogDescription>
-              Add a new luxury service to your offerings
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="service-name">Service Name</Label>
-              <Input
-                id="service-name"
-                placeholder="e.g., Personal Shopping"
-                value={newServiceName}
-                onChange={(e) => setNewServiceName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="service-price">Base Price</Label>
-              <Input
-                id="service-price"
-                placeholder="e.g., $200"
-                value={newServicePrice}
-                onChange={(e) => setNewServicePrice(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsServiceModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddCustomService}>
-              Add Service
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </Layout>
   );
 }
