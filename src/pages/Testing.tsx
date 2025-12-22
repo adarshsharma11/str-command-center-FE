@@ -11,6 +11,10 @@ import { toast } from 'sonner';
 import { Calendar, Clock, User, Home, Mail, Phone, Plus, Trash2, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { fetchServiceCategories, type ServiceCategory } from '@/lib/api/service-category';
 import { useAllPropertiesQuery } from '@/lib/api/property';
+import { apiClient } from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
+import { env } from '@/config/env';
+import { getToken } from '@/lib/auth/token';
 
 // ============================================================
 // TESTING PAGE
@@ -74,7 +78,7 @@ const BOOKING_SOURCES = [
 type LogEntry = {
   id: string;
   timestamp: Date;
-  type: 'calendar' | 'guest-message' | 'crew-message' | 'service-message';
+  type: 'calendar' | 'guest-message' | 'crew-message' | 'service-message' | 'database' | 'system';
   status: 'success' | 'pending' | 'error';
   message: string;
   details?: string;
@@ -101,6 +105,8 @@ export default function Testing() {
   // API Test State
   const [fetchedCategories, setFetchedCategories] = useState<ServiceCategory[] | null>(null);
   const [isFetchingCategories, setIsFetchingCategories] = useState(false);
+  const [bookingTestResult, setBookingTestResult] = useState<unknown>(null);
+  const [isCreatingBooking, setIsCreatingBooking] = useState(false);
 
   const handleTestFetchCategories = async () => {
     setIsFetchingCategories(true);
@@ -116,6 +122,126 @@ export default function Testing() {
       toast.error('Error fetching categories');
     } finally {
       setIsFetchingCategories(false);
+    }
+  };
+
+  const handleTestCreateBooking = async () => {
+    setIsCreatingBooking(true);
+    setLogs([]); // Clear logs for new test
+
+    // Get property name
+    const propertyName = properties.find(p => String(p.id) === booking.propertyId)?.name || 
+                        MOCK_PROPERTIES.find(p => p.id === booking.propertyId)?.name || 
+                        'Test Property';
+
+    // Map services from the form
+    const services = booking.additionalServices.map(s => ({
+      service_id: parseInt(s.serviceType) || 1, // Fallback to 1 if not a valid number, as API expects number
+      service_date: s.date ? `${s.date}T${s.time || '09:00'}:00` : "2024-01-02T09:00:00",
+      time: s.time || "09:00"
+    }));
+
+    // Construct payload using form data, falling back to defaults if empty
+    const payload = { 
+      "reservation_id": String(Date.now()), 
+      "platform": booking.bookingSource || "airbnb", 
+      "guest_name": booking.guestName || "Test Guest", 
+      "check_in_date": booking.checkInDate ? `${booking.checkInDate}T14:00:00` : "2024-01-01T14:00:00", 
+      "check_out_date": booking.checkOutDate ? `${booking.checkOutDate}T11:00:00` : "2024-01-05T11:00:00", 
+      "services": services.length > 0 ? services : [ 
+        { 
+          "service_id": 1, 
+          "service_date": "2024-01-02T09:00:00", 
+          "time": "09:00" 
+        } 
+      ], 
+      "guest_phone": booking.guestPhone || "123-456-7890", 
+      "guest_email": booking.guestEmail || "test@example.com", 
+      "property_id": booking.propertyId || "prop-123", 
+      "property_name": propertyName, 
+      "number_of_guests": 2, 
+      "total_amount": 100.0, 
+      "currency": "USD" 
+    };
+
+    const mapStepToType = (step: string): LogEntry['type'] => {
+      switch (step) {
+        case 'database': return 'database';
+        case 'calendar': return 'calendar';
+        case 'guest_notification': return 'guest-message';
+        case 'crew_notification': return 'crew-message';
+        case 'services': return 'service-message';
+        case 'complete': return 'system';
+        default: return 'system';
+      }
+    };
+
+    try {
+      const token = getToken();
+      const response = await fetch(`${env.apiBaseUrl}${ENDPOINTS.BOOKING.LIST}?stream=true`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        setBookingTestResult(errorData);
+        throw new Error(errorData.detail?.message || errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Response body is not readable');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        // Keep the last partial line in the buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            
+            // Map API response to LogEntry
+            const logEntry: LogEntry = {
+              id: `log-${Date.now()}-${Math.random()}`,
+              timestamp: new Date(),
+              type: mapStepToType(data.step),
+              status: data.status === 'completed' || data.status === 'success' ? 'success' : 'error',
+              message: data.message || `Step ${data.step} ${data.status}`,
+              details: data.step === 'complete' ? undefined : JSON.stringify(data, null, 2)
+            };
+
+            setLogs(prev => [...prev, logEntry]);
+            
+            // If complete, set the final result
+            if (data.step === 'complete') {
+              setBookingTestResult(data);
+              toast.success('Test booking completed successfully');
+            }
+          } catch (e) {
+            console.error('Error parsing JSON line:', line, e);
+          }
+        }
+      }
+      
+    } catch (err) {
+      toast.error('Error creating test booking');
+      setBookingTestResult({ error: err instanceof Error ? err.message : 'Unknown error' });
+    } finally {
+      setIsCreatingBooking(false);
     }
   };
 
@@ -296,20 +422,22 @@ export default function Testing() {
     ));
   };
 
+  const getLogTypeLabel = (type: LogEntry['type']) => {
+    switch (type) {
+      case 'calendar': return 'Calendar';
+      case 'guest-message': return 'Guest Comm';
+      case 'crew-message': return 'Crew Comm';
+      case 'service-message': return 'Service Provider';
+      case 'database': return 'Database';
+      case 'system': return 'System';
+      default: return type;
+    }
+  };
+
   const getLogIcon = (log: LogEntry) => {
     if (log.status === 'success') return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     if (log.status === 'error') return <AlertCircle className="h-4 w-4 text-destructive" />;
     return <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />;
-  };
-
-  const getLogTypeLabel = (type: LogEntry['type']) => {
-    switch (type) {
-      case 'calendar': return 'Calendar';
-      case 'guest-message': return 'Guest';
-      case 'crew-message': return 'Crew';
-      case 'service-message': return 'Service';
-      default: return 'Unknown';
-    }
   };
 
   // ============================================================
@@ -626,6 +754,25 @@ export default function Testing() {
               {fetchedCategories && (
                 <div className="mt-4 p-4 bg-muted rounded-md overflow-auto max-h-60">
                   <pre className="text-xs">{JSON.stringify(fetchedCategories, null, 2)}</pre>
+                </div>
+              )}
+
+              <Separator className="my-4" />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="font-medium">POST /api/v1/bookings</h3>
+                  <p className="text-sm text-muted-foreground">Create a test booking using form data above</p>
+                </div>
+                <Button onClick={handleTestCreateBooking} disabled={isCreatingBooking}>
+                  {isCreatingBooking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Booking (from Form)
+                </Button>
+              </div>
+
+              {bookingTestResult && (
+                <div className="mt-4 p-4 bg-muted rounded-md overflow-auto max-h-60">
+                  <pre className="text-xs">{JSON.stringify(bookingTestResult, null, 2)}</pre>
                 </div>
               )}
             </div>
