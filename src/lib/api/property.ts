@@ -35,6 +35,7 @@ export type PropertyView = {
   name: string;
   address: string;
   internalStatus: 'Active' | 'Inactive' | 'Maintenance';
+  iCalUrl: string;
 };
 
 export type PropertyListingView = {
@@ -55,6 +56,7 @@ function toViewProperty(p: PropertyApiItem): PropertyView {
     name: p.name || '—',
     address: p.address || '—',
     internalStatus: internal,
+    iCalUrl: p.ical_feed_url || '',
   };
 }
 
@@ -63,6 +65,7 @@ function toPropertyListings(p: PropertyApiItem): PropertyListingView[] {
     propertyId: String(p.id),
     syncStatus: 'Pending' as const,
     trustScore: 0,
+    iCalUrl: p.ical_feed_url || '',
     lastSyncedAt: new Date(p.updated_at || p.created_at || Date.now()),
   };
   const rows: PropertyListingView[] = [];

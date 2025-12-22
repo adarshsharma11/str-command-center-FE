@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Link2, ExternalLink } from 'lucide-react';
+import { Plus, Link2, ExternalLink, Copy, Check } from 'lucide-react';
 import { PropertiesPageSkeleton } from '@/components/skeletons/PropertiesListSkeleton';
 import { usePropertiesQuery, propertyMappers, useCreatePropertyMutation, createPropertySchema, type PropertyView, type PropertyListingView, type CreatePropertyFormData } from '@/lib/api/property';
 import { useToast } from '@/components/ui/use-toast';
@@ -17,6 +17,7 @@ import { useToast } from '@/components/ui/use-toast';
 export default function Properties() {
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [copiedPropertyId, setCopiedPropertyId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const {
@@ -61,6 +62,7 @@ export default function Properties() {
   const apiItems = data?.data?.data ?? [];
   const properties: PropertyView[] = apiItems.map(propertyMappers.toViewProperty);
   const listings: PropertyListingView[] = apiItems.flatMap(propertyMappers.toPropertyListings);
+  console.log(properties, 'dddd')
 
   const getPropertyListings = (propertyId: string) => {
     return listings.filter(l => l.propertyId === propertyId);
@@ -81,6 +83,35 @@ export default function Properties() {
       vrbo_id: data.vrbo_id || undefined,
       booking_id: data.booking_id || undefined,
     });
+  };
+
+  const copyICalUrl = async (propertyId: string, iCalUrl: string) => {
+    if (!iCalUrl) {
+      toast({
+        title: 'No iCal URL',
+        description: 'This property does not have an iCal feed URL.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(iCalUrl);
+      setCopiedPropertyId(propertyId);
+      toast({
+        title: 'iCal URL Copied',
+        description: 'The iCal feed URL has been copied to your clipboard.',
+      });
+      
+      // Reset the copied state after 2 seconds
+      setTimeout(() => setCopiedPropertyId(null), 2000);
+    } catch (error) {
+      toast({
+        title: 'Copy Failed',
+        description: 'Failed to copy the iCal URL. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const syncStatusColors = {
@@ -261,6 +292,31 @@ export default function Properties() {
                         ))}
                       </div>
                     </div>
+
+                    {property.iCalUrl && (
+                      <div className="pt-2 border-t">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-muted-foreground mb-1">iCal Feed URL</p>
+                            <p className="text-xs text-muted-foreground truncate font-mono">
+                              {property.iCalUrl}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyICalUrl(property.id, property.iCalUrl)}
+                            className="ml-2 h-8 w-8"
+                          >
+                            {copiedPropertyId === property.id ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     <Dialog>
                       <DialogTrigger asChild>
