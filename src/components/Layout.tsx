@@ -1,12 +1,18 @@
 import { ReactNode } from 'react';
 import { NavLink } from '@/components/NavLink';
-import { LayoutDashboard, Calendar, Inbox, Users, Zap, Home, BookOpen, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calendar, Inbox, Users, Zap, Home, BookOpen, Settings, LogOut, FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+
 interface LayoutProps {
   children: ReactNode;
 }
+
+// ============================================================
+// NAVIGATION ITEMS
+// Add new pages here to include them in the sidebar
+// ============================================================
 const navItems = [{
   to: '/dashboard',
   icon: LayoutDashboard,
@@ -39,6 +45,10 @@ const navItems = [{
   to: '/settings',
   icon: Settings,
   label: 'Settings'
+}, {
+  to: '/testing',
+  icon: FlaskConical,
+  label: 'Testing'  // New testing tab for developers
 }];
 export function Layout({
   children

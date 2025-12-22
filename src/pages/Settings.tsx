@@ -123,6 +123,11 @@ export default function Settings() {
     });
   };
 
+  // ============================================================
+  // TEST CONNECTION HANDLER
+  // Tests if provided credentials can connect to the platform
+  // Returns true if connection successful, false otherwise
+  // ============================================================
   const handleTestConnection = async (credentials: PlatformCredentials): Promise<boolean> => {
     if (!selectedPlatform) return false;
     
@@ -132,6 +137,7 @@ export default function Settings() {
         credentials,
       });
       
+      // Check if status exists on the result data
       return result.data?.status === 'success';
     } catch {
       return false;
