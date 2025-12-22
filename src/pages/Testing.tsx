@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Calendar, Clock, User, Home, Mail, Phone, Plus, Trash2, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { fetchServiceCategories, type ServiceCategory } from '@/lib/api/service-category';
+import { fetchServiceCategories, useServiceCategoriesQuery, type ServiceCategory } from '@/lib/api/service-category';
 import { useAllPropertiesQuery } from '@/lib/api/property';
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
@@ -23,6 +23,14 @@ import { getToken } from '@/lib/auth/token';
 // crew notifications, service provider notifications)
 // 
 // TODO: Your coders will need to hook these up to actual APIs
+// 
+// RECENT UPDATES:
+// - Added email and phone fields to Service Category API
+// - Service categories now support contact information
+// - Replaced MOCK_SERVICES with real Service Category API
+// - Service selection now uses actual service categories from backend
+// - Added Total Amount and Number of Guests fields to form
+// - Form now captures all payload fields for complete booking testing
 // ============================================================
 
 // ============================================================
@@ -43,6 +51,8 @@ type TestBooking = {
   guestEmail: string;
   guestPhone: string;
   guestName: string;
+  totalAmount: string;
+  numberOfGuests: string;
   additionalServices: AdditionalService[];
 };
 
@@ -54,15 +64,6 @@ const MOCK_PROPERTIES = [
   { id: 'prop-2', name: 'Mountain Retreat' },
   { id: 'prop-3', name: 'Downtown Loft' },
   { id: 'prop-4', name: 'Beachfront Bungalow' },
-];
-
-const MOCK_SERVICES = [
-  { id: 'service-chef', name: 'Private Chef', defaultDuration: '3 hours' },
-  { id: 'service-massage', name: 'Massage Therapy', defaultDuration: '1 hour' },
-  { id: 'service-transport', name: 'Airport Transfer', defaultDuration: '1 hour' },
-  { id: 'service-concierge', name: 'Concierge Service', defaultDuration: '2 hours' },
-  { id: 'service-bartender', name: 'Bartender', defaultDuration: '4 hours' },
-  { id: 'service-photography', name: 'Photography Session', defaultDuration: '2 hours' },
 ];
 
 const BOOKING_SOURCES = [
@@ -96,6 +97,8 @@ export default function Testing() {
     guestEmail: '',
     guestPhone: '',
     guestName: '',
+    totalAmount: '',
+    numberOfGuests: '',
     additionalServices: [],
   });
 
@@ -159,8 +162,8 @@ export default function Testing() {
       "guest_email": booking.guestEmail || "test@example.com", 
       "property_id": booking.propertyId || "prop-123", 
       "property_name": propertyName, 
-      "number_of_guests": 2, 
-      "total_amount": 100.0, 
+      "number_of_guests": parseInt(booking.numberOfGuests) || 2, 
+      "total_amount": parseFloat(booking.totalAmount) || 100.0, 
       "currency": "USD" 
     };
 
@@ -247,6 +250,10 @@ export default function Testing() {
 
   const { data: propertiesData, isLoading: isLoadingProperties } = useAllPropertiesQuery();
   const properties = (Array.isArray(propertiesData?.data) ? propertiesData.data : propertiesData?.data?.data) || [];
+
+  // Fetch service categories for service selection
+  const { data: serviceCategoriesData, isLoading: isLoadingServiceCategories } = useServiceCategoriesQuery();
+  const serviceCategories = serviceCategoriesData?.data || [];
 
   // ============================================================
   // HANDLERS - Form updates
@@ -360,7 +367,7 @@ export default function Testing() {
       // ============================================================
       for (const service of booking.additionalServices) {
         if (service.serviceType && service.date && service.time) {
-          const serviceName = MOCK_SERVICES.find(s => s.id === service.serviceType)?.name || 'Service';
+          const serviceName = serviceCategories.find(c => String(c.id) === service.serviceType)?.category_name || 'Service';
           
           addLog({
             type: 'service-message',
@@ -572,6 +579,30 @@ export default function Testing() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Number of Guests</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={booking.numberOfGuests}
+                    onChange={(e) => updateBooking('numberOfGuests', e.target.value)}
+                    placeholder="2"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Total Amount (USD)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={booking.totalAmount}
+                    onChange={(e) => updateBooking('totalAmount', e.target.value)}
+                    placeholder="100.00"
+                  />
+                </div>
+              </div>
+
               <Separator />
 
               {/* Additional Services */}
@@ -615,11 +646,19 @@ export default function Testing() {
                             <SelectValue placeholder="Select service" />
                           </SelectTrigger>
                           <SelectContent>
-                            {MOCK_SERVICES.map(s => (
-                              <SelectItem key={s.id} value={s.id}>
-                                {s.name} ({s.defaultDuration})
-                              </SelectItem>
-                            ))}
+                            {isLoadingServiceCategories ? (
+                              <SelectItem value="" disabled>Loading services...</SelectItem>
+                            ) : serviceCategories.length > 0 ? (
+                              serviceCategories.map(category => (
+                                <SelectItem key={category.id} value={String(category.id)}>
+                                  {category.category_name} 
+                                  {category.time && ` (${category.time})`}
+                                  {category.price && ` - $${category.price}`}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="" disabled>No services available</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>

@@ -7,6 +7,8 @@ export type ServiceCategory = {
   category_name: string;
   price?: string | null;
   time?: string | null;
+  email?: string | null;
+  phone?: string | null;
   status: boolean;
   created_at?: string;
   updated_at?: string | null;
@@ -16,6 +18,8 @@ export type CreateServiceCategoryPayload = {
   category_name: string;
   price?: string;
   time?: string;
+  email?: string;
+  phone?: string;
   status?: boolean;
 };
 

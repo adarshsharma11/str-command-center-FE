@@ -280,6 +280,8 @@ export default function Settings() {
                                 <p className="text-sm text-muted-foreground">
                                   {service.price ? `Base rate: $${service.price}` : 'No base rate'}
                                   {service.time && ` • ${service.time}`}
+                                  {service.email && ` • Email: ${service.email}`}
+                                  {service.phone && ` • Phone: ${service.phone}`}
                                 </p>
                               </div>
                               <Switch 

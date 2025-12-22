@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { Mail, Phone } from 'lucide-react';
 import {
   useCreateServiceCategoryMutation,
   useUpdateServiceCategoryMutation,
@@ -32,6 +33,8 @@ const formSchema = z.object({
   category_name: z.string().min(1, 'Category name is required'),
   price: z.string().optional(),
   time: z.string().optional(),
+  email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  phone: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -56,6 +59,8 @@ export function ServiceCategoryDialog({
       category_name: '',
       price: '',
       time: '',
+      email: '',
+      phone: '',
     },
   });
 
@@ -65,12 +70,16 @@ export function ServiceCategoryDialog({
         category_name: categoryToEdit.category_name,
         price: categoryToEdit.price || '',
         time: categoryToEdit.time || '',
+        email: categoryToEdit.email || '',
+        phone: categoryToEdit.phone || '',
       });
     } else {
       form.reset({
         category_name: '',
         price: '',
         time: '',
+        email: '',
+        phone: '',
       });
     }
   }, [categoryToEdit, form, open]);
@@ -114,16 +123,24 @@ export function ServiceCategoryDialog({
   });
 
   const onSubmit = (values: FormValues) => {
+    const payload = {
+      ...values,
+      email: values.email || undefined,
+      phone: values.phone || undefined,
+    };
+
     if (categoryToEdit) {
       updateMutation.mutate({
         id: categoryToEdit.id,
-        payload: values,
+        payload,
       });
     } else {
       createMutation.mutate({
         category_name: values.category_name,
         price: values.price,
         time: values.time,
+        email: values.email,
+        phone: values.phone,
         status: true, // Default status to true
       });
     }
@@ -181,6 +198,48 @@ export function ServiceCategoryDialog({
                     <FormLabel>Duration</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. 2h" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Contact Email
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="email"
+                        placeholder="contact@example.com" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Contact Phone
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="tel"
+                        placeholder="+1 (555) 123-4567" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
