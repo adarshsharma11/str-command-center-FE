@@ -139,14 +139,27 @@ export function useBookingsQuery(page = 1, limit = 10, options?: QueryOptions<Bo
   });
 }
 
-// Hook for calendar bookings with transformation
-export function useCalendarBookingsQuery(page = 1, limit = 50, options?: QueryOptions<BookingApiResponse>) {
-  return useQuery<BookingApiResponse>({
+// ============================================================
+// CALENDAR BOOKINGS HOOK
+// Transforms API response into calendar-friendly format
+// Returns { bookings, vendorTasks, page, limit, total, total_pages }
+// ============================================================
+type CalendarBookingsResult = {
+  bookings: CalendarBooking[];
+  vendorTasks: VendorTask[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+};
+
+export function useCalendarBookingsQuery(page = 1, limit = 50, options?: Omit<QueryOptions<CalendarBookingsResult>, 'queryKey' | 'queryFn'>) {
+  return useQuery<CalendarBookingsResult>({
     queryKey: ['calendar-bookings', page, limit],
-    queryFn: () => fetchBookings(page, limit),
-    staleTime: 30_000,
-    select: (data) => {
-      // Transform bookings
+    queryFn: async () => {
+      const data = await fetchBookings(page, limit);
+      
+      // Transform bookings to calendar format
       const bookings = data.data.bookings.map(toCalendarBooking);
       
       // Extract and transform vendor tasks from all bookings
@@ -177,6 +190,7 @@ export function useCalendarBookingsQuery(page = 1, limit = 50, options?: QueryOp
         total_pages: data.data.total_pages,
       };
     },
+    staleTime: 30_000,
     ...options,
   });
 }

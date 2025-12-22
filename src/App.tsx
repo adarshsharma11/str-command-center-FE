@@ -12,12 +12,11 @@ import Automation from "./pages/Automation";
 import Properties from "./pages/Properties";
 import Bookings from "./pages/Bookings";
 import Settings from "./pages/Settings";
+import Testing from "./pages/Testing"; // New testing page for developers
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/context/AuthContext";
 import PrivateRoute from "@/components/PrivateRoute";
 import PublicRoute from "@/components/PublicRoute";
-
-
 
 const queryClient = new QueryClient();
 
@@ -29,10 +28,15 @@ const App = () => (
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            {/* Root redirects to auth (or dashboard if logged in via PublicRoute) */}
             <Route path="/" element={<Navigate to="/auth" replace />} />
+            
+            {/* Public routes - only accessible when NOT logged in */}
             <Route element={<PublicRoute />}>
               <Route path="/auth" element={<Auth />} />
             </Route>
+            
+            {/* Private routes - only accessible when logged in */}
             <Route element={<PrivateRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/calendar" element={<Calendar />} />
@@ -42,7 +46,9 @@ const App = () => (
               <Route path="/properties" element={<Properties />} />
               <Route path="/bookings" element={<Bookings />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/testing" element={<Testing />} /> {/* Developer testing page */}
             </Route>
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

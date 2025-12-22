@@ -88,7 +88,12 @@ export const useDisconnectIntegrationMutation = (options?: UseMutationOptions<Ap
   });
 };
 
-export const useTestConnectionMutation = (options?: UseMutationOptions<ApiResponse<void>, Error, TestConnectionPayload>) => {
+// ============================================================
+// TEST CONNECTION MUTATION
+// Tests if platform credentials are valid
+// Returns { status: 'success' | 'failed' }
+// ============================================================
+export const useTestConnectionMutation = (options?: UseMutationOptions<ApiResponse<{ status: 'success' | 'failed' }>, Error, TestConnectionPayload>) => {
   return useMutation({
     mutationFn: testConnection,
     ...options,
