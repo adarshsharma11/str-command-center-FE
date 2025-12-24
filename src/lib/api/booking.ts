@@ -125,15 +125,42 @@ export function toVendorTask(apiTask: {
   };
 }
 
-async function fetchBookings(page = 1, limit = 10): Promise<BookingApiResponse> {
-  const qp = new URLSearchParams({ page: String(page), limit: String(limit) }).toString();
-  return apiClient.get<BookingApiResponse>(`${ENDPOINTS.BOOKING.LIST}?${qp}&platform=airbnb`);
+type BookingFilters = {
+  platform?: string;
+  status?: string;
+  search?: string;
+};
+
+async function fetchBookings(page = 1, limit = 100, filters?: BookingFilters): Promise<BookingApiResponse> {
+  const params = new URLSearchParams({ 
+    page: String(page), 
+    limit: String(limit) 
+  });
+  
+  if (filters?.platform && filters.platform !== 'all') {
+    params.append('platform', filters.platform);
+  }
+  
+  if (filters?.status && filters.status !== 'all') {
+    params.append('status', filters.status);
+  }
+  
+  if (filters?.search) {
+    params.append('search', filters.search);
+  }
+
+  return apiClient.get<BookingApiResponse>(`${ENDPOINTS.BOOKING.LIST}?${params.toString()}`);
 }
 
-export function useBookingsQuery(page = 1, limit = 10, options?: QueryOptions<BookingApiResponse>) {
+export function useBookingsQuery(
+  page = 1, 
+  limit = 10, 
+  filters?: BookingFilters,
+  options?: QueryOptions<BookingApiResponse>
+) {
   return useQuery<BookingApiResponse>({
-    queryKey: ['bookings', page, limit],
-    queryFn: () => fetchBookings(page, limit),
+    queryKey: ['bookings', page, limit, filters],
+    queryFn: () => fetchBookings(page, limit, filters),
     staleTime: 30_000,
     ...options,
   });
