@@ -3,9 +3,10 @@ import { Layout } from '@/components/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBookingsQuery, toViewBooking, type ViewBooking } from '@/lib/api/booking';
 import { BookingsPageSkeleton } from '@/components/skeletons/BookingsListSkeleton';
 
@@ -13,18 +14,20 @@ export default function Bookings() {
   const [searchTerm, setSearchTerm] = useState('');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const page = 1;
-  const limit = 10;
-  const { data, isLoading } = useBookingsQuery(page, limit);
-  const apiBookings = data?.data?.bookings ?? [];
-  const allBookings: ViewBooking[] = apiBookings.map(toViewBooking);
-  const bookings = allBookings.filter(b => {
-    const matchesSearch = b.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.propertyName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlatform = platformFilter === 'all' || b.platform === platformFilter;
-    const matchesStatus = statusFilter === 'all' || b.reservationStatus === statusFilter;
-    return matchesSearch && matchesPlatform && matchesStatus;
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  
+  const { data, isLoading } = useBookingsQuery(page, limit, {
+    platform: platformFilter,
+    status: statusFilter,
+    search: searchTerm,
   });
+  
+  const apiBookings = data?.data?.bookings ?? [];
+  const totalPages = data?.data?.total_pages ?? 1;
+  const totalItems = data?.data?.total ?? 0;
+  
+  const bookings: ViewBooking[] = apiBookings.map(toViewBooking);
 
   const statusColors = {
     Confirmed: 'bg-green-500 text-white',
@@ -134,6 +137,33 @@ export default function Bookings() {
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-muted-foreground">
+                  Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalItems)} of {totalItems} entries
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-2" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
