@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { IntegrationUser } from '@/lib/api/integrations';
 
 const formSchema = z.object({
   email: z.string().email('Invalid email format'),
@@ -32,8 +34,9 @@ interface UserIntegrationDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: FormValues) => Promise<void>;
   isSubmitting?: boolean;
-  user?: { email: string; status: string } | null;
+  user?: IntegrationUser | null;
   onTestConnection?: (email: string) => void;
+  onConnect?: (email: string) => void;
 }
 
 export function UserIntegrationDialog({
@@ -43,7 +46,10 @@ export function UserIntegrationDialog({
   isSubmitting = false,
   user,
   onTestConnection,
+  onConnect,
 }: UserIntegrationDialogProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,37 +58,84 @@ export function UserIntegrationDialog({
     },
   });
 
+  useEffect(() => {
+    if (open) {
+      setIsEditing(false);
+      if (user) {
+        form.reset({
+          email: user.email,
+          password: '',
+        });
+      } else {
+        form.reset({
+          email: '',
+          password: '',
+        });
+      }
+    }
+  }, [open, user, form]);
+
   const handleSubmit = async (values: FormValues) => {
     await onSubmit(values);
-    form.reset();
+    if (!user) form.reset();
+    if (isEditing) setIsEditing(false);
   };
 
-  const isManageMode = !!user;
+  const isManageMode = !!user && !isEditing;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{isManageMode ? 'Manage User Integration' : 'Add User Integration'}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? 'Edit Integration' : (user ? 'Manage Integration' : 'Add User Integration')}
+          </DialogTitle>
           <DialogDescription>
-            {isManageMode 
-              ? 'Manage connection settings for this user.' 
-              : 'Enter the credentials to connect a new user integration.'}
+            {isEditing || !user
+              ? 'Enter the credentials to connect integration.'
+              : 'Manage connection settings for this user.'}
           </DialogDescription>
         </DialogHeader>
         
         {isManageMode ? (
           <div className="space-y-4">
+            {user.platform && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Platform</label>
+                <Input value={user.platform} disabled />
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Email</label>
               <Input value={user.email} disabled />
             </div>
-            <div className="flex justify-between items-center pt-4">
-              <div className="text-sm text-muted-foreground">
-                Status: <span className={user.status === 'active' ? 'text-green-600' : 'text-muted-foreground'}>{user.status}</span>
+            
+            <div className="text-sm text-muted-foreground pt-2">
+              Status: <span className={user.status === 'active' ? 'text-green-600' : 'text-muted-foreground'}>{user.status}</span>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-4">
+              <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setIsEditing(true)}
+                >
+                  Edit
+                </Button>
+                <Button 
+                  type="button" 
+                  className="flex-1"
+                  onClick={() => onConnect?.(user.email)}
+                >
+                  Connect
+                </Button>
               </div>
               <Button 
                 type="button" 
+                variant="secondary" 
+                className="w-full"
                 onClick={() => onTestConnection?.(user.email)}
               >
                 Test Connection
@@ -119,12 +172,22 @@ export function UserIntegrationDialog({
                 )}
               />
               <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    if (user && isEditing) {
+                      setIsEditing(false);
+                    } else {
+                      onOpenChange(false);
+                    }
+                  }}
+                >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Add Integration
+                  {isEditing ? 'Save Changes' : 'Add Integration'}
                 </Button>
               </div>
             </form>

@@ -2,13 +2,14 @@ import { useMutation, useQuery, type UseMutationOptions, type UseQueryOptions } 
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 
-export type PlatformType = 'airbnb' | 'vrbo' | 'booking_com' | 'stripe';
+export type PlatformType = 'airbnb' | 'vrbo' | 'booking_com' | 'booking' | 'verbo' | 'stripe';
 
 export type IntegrationStatus = 'connected' | 'not_connected' | 'error' | 'testing' | 'active' | 'inactive';
 
 export type IntegrationUser = {
   email: string;
   status: IntegrationStatus;
+  platform?: string;
 };
 
 export type CreateIntegrationUserPayload = {

@@ -16,16 +16,11 @@ import {
   useUpdateServiceCategoryStatusMutation,
   type ServiceCategory
 } from '@/lib/api/service-category';
-import { PlatformConfigModal } from '@/components/integrations/PlatformConfigModal';
 import { 
-  useConnectIntegrationMutation, 
-  useDisconnectIntegrationMutation,
-  useTestConnectionMutation,
   useIntegrationUsersQuery,
   useCreateIntegrationUserMutation,
   useConnectIntegrationUserMutation,
-  type PlatformType,
-  type PlatformCredentials 
+  type IntegrationUser
 } from '@/lib/api/integrations';
 import { UserIntegrationDialog } from '@/components/integrations/UserIntegrationDialog';
 import { useToast } from '@/hooks/use-toast';
@@ -33,11 +28,9 @@ import { useToast } from '@/hooks/use-toast';
 export default function Settings() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [selectedPlatform, setSelectedPlatform] = useState<{ platform: PlatformType; name: string } | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isUserIntegrationModalOpen, setIsUserIntegrationModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<{ email: string; status: string } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<IntegrationUser | null>(null);
   const [editingCategory, setEditingCategory] = useState<ServiceCategory | null>(null);
   
   const { data: serviceCategoriesData, isLoading: isLoadingServices } = useServiceCategoriesQuery();
@@ -66,139 +59,12 @@ export default function Settings() {
 
   const connectUserMutation = useConnectIntegrationUserMutation({
     onSuccess: (data) => {
-      toast({ title: 'Success', description: data.message || 'Connection test successful.' });
+      toast({ title: 'Success', description: data.message || 'Connection successful.' });
     },
     onError: (err) => {
-      toast({ title: 'Error', description: err.message || 'Connection test failed.', variant: 'destructive' });
+      toast({ title: 'Error', description: err.message || 'Connection failed.', variant: 'destructive' });
     }
   });
-
-  const [connectedPlatforms, setConnectedPlatforms] = useState<Record<PlatformType, { status: 'connected' | 'not_connected'; email?: string }>>({
-    airbnb: { status: 'not_connected' },
-    vrbo: { status: 'not_connected' },
-    booking_com: { status: 'not_connected' },
-    stripe: { status: 'not_connected' },
-  });
-
-  // Mutations
-  const connectMutation = useConnectIntegrationMutation({
-    onSuccess: (data) => {
-      if (selectedPlatform) {
-        setConnectedPlatforms(prev => ({
-          ...prev,
-          [selectedPlatform.platform]: {
-            status: 'connected',
-            email: data.data?.email || connectedPlatforms[selectedPlatform.platform]?.email,
-          }
-        }));
-      }
-      toast({
-        title: 'Success',
-        description: 'Platform connected successfully',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Connection failed',
-        description: error.message || 'Failed to connect platform',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const disconnectMutation = useDisconnectIntegrationMutation({
-    onSuccess: () => {
-      if (selectedPlatform) {
-        setConnectedPlatforms(prev => ({
-          ...prev,
-          [selectedPlatform.platform]: { status: 'not_connected', email: undefined }
-        }));
-      }
-      toast({
-        title: 'Success',
-        description: 'Platform disconnected successfully',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Disconnect failed',
-        description: error.message || 'Failed to disconnect platform',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const testMutation = useTestConnectionMutation({
-    onSuccess: () => {
-      toast({
-        title: 'Connection test successful',
-        description: 'Platform connection is working',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Connection test failed',
-        description: error.message || 'Failed to test connection',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Platform configurations
-  const platforms = [
-    { platform: 'airbnb' as PlatformType, name: 'Airbnb' },
-    { platform: 'vrbo' as PlatformType, name: 'Vrbo' },
-    { platform: 'booking_com' as PlatformType, name: 'Booking.com' },
-  ];
-
-  const handleConnect = async (credentials: PlatformCredentials) => {
-    if (!selectedPlatform) return;
-    
-    await connectMutation.mutateAsync({
-      platform: selectedPlatform.platform,
-      credentials,
-    });
-  };
-
-  // ============================================================
-  // TEST CONNECTION HANDLER
-  // Tests if provided credentials can connect to the platform
-  // Returns true if connection successful, false otherwise
-  // ============================================================
-  const handleTestConnection = async (credentials: PlatformCredentials): Promise<boolean> => {
-    if (!selectedPlatform) return false;
-    
-    try {
-      const result = await testMutation.mutateAsync({
-        platform: selectedPlatform.platform,
-        credentials,
-      });
-      
-      // Check if status exists on the result data
-      return result.data?.status === 'success';
-    } catch {
-      return false;
-    }
-  };
-
-  const handleDisconnect = async () => {
-    if (!selectedPlatform) return;
-    
-    await disconnectMutation.mutateAsync(selectedPlatform.platform);
-  };
-
-  const getIntegrationStatus = (platform: PlatformType) => {
-    return connectedPlatforms[platform].status;
-  };
-
-  const getIntegrationEmail = (platform: PlatformType) => {
-    return connectedPlatforms[platform].email || '';
-  };
-
-  const handleConfigureClick = (platform: PlatformType, name: string) => {
-    setSelectedPlatform({ platform, name });
-    setIsModalOpen(true);
-  };
 
   const handleAddUserIntegration = async (values: { email: string; password: string }) => {
     await createUserMutation.mutateAsync(values);
@@ -214,7 +80,7 @@ export default function Settings() {
 
         <Card>
           <CardContent className="pt-6">
-            <Tabs defaultValue="business" className="w-full">
+            <Tabs defaultValue="integrations" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="business">Business</TabsTrigger>
                 <TabsTrigger value="services">Services</TabsTrigger>
@@ -222,6 +88,7 @@ export default function Settings() {
                 <TabsTrigger value="notifications">Notifications</TabsTrigger>
               </TabsList>
 
+              {/* Business Tab */}
               <TabsContent value="business" className="space-y-4 mt-6">
                 <Card>
                   <CardHeader>
@@ -276,6 +143,7 @@ export default function Settings() {
                 </Card>
               </TabsContent>
 
+              {/* Services Tab */}
               <TabsContent value="services" className="space-y-4 mt-6">
                 <Card>
                   <CardHeader>
@@ -350,6 +218,7 @@ export default function Settings() {
                 />
               </TabsContent>
 
+              {/* Integrations Tab */}
               <TabsContent value="integrations" className="space-y-4 mt-6">
                 <Card>
                   <CardHeader>
@@ -360,59 +229,21 @@ export default function Settings() {
                           Manage your connected platforms and user accounts
                         </CardDescription>
                       </div>
-                      <Button size="sm" onClick={() => {
-                        setSelectedUser(null);
-                        setIsUserIntegrationModalOpen(true);
-                      }}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add User Integration
-                      </Button>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {/* Platform Integrations */}
-                    {platforms.map(({ platform, name }) => {
-                      const status = getIntegrationStatus(platform);
-                      const email = getIntegrationEmail(platform);
-                      const isConnected = status === 'connected';
-                      
-                      return (
-                        <div key={platform}>
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <p className="font-medium text-foreground">{name}</p>
-                              <p className={`text-sm ${
-                                isConnected ? 'text-green-600' : 'text-muted-foreground'
-                              }`}>
-                                {isConnected 
-                                  ? (email ? `Connected: ${email}` : 'Connected') 
-                                  : 'Not Connected'
-                                }
-                              </p>
-                            </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleConfigureClick(platform, name)}
-                            >
-                              {isConnected ? 'Configure' : 'Connect'}
-                            </Button>
-                          </div>
-                          <Separator />
-                        </div>
-                      );
-                    })}
-
-                    {/* User Integrations */}
                     {isLoadingUsers ? (
                       <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
                     ) : (
                       <>
-                        {usersData?.data?.map((user) => (
-                          <div key={user.email}>
+                        {usersData?.data?.map((user, index) => (
+                          <div key={user.email + index}>
                             <div className="flex items-center justify-between mb-3">
                               <div>
-                                <p className="font-medium text-foreground">{user.email}</p>
+                                {user.platform && (
+                                    <p className="font-medium text-foreground capitalize">{user.platform}</p>
+                                )}
+                                <p className="text-sm text-muted-foreground">{user.email}</p>
                                 <p className={`text-sm ${user.status === 'active' ? 'text-green-600' : 'text-muted-foreground'}`}>
                                   Status: {user.status}
                                 </p>
@@ -431,6 +262,11 @@ export default function Settings() {
                             <Separator />
                           </div>
                         ))}
+                        {!usersData?.data?.length && (
+                             <div className="text-center py-4 text-muted-foreground">
+                                No integrations found.
+                             </div>
+                        )}
                       </>
                     )}
                   </CardContent>
@@ -457,6 +293,7 @@ export default function Settings() {
                 </Card>
               </TabsContent>
 
+              {/* Notifications Tab */}
               <TabsContent value="notifications" className="space-y-4 mt-6">
                 <Card>
                   <CardHeader>
@@ -511,32 +348,18 @@ export default function Settings() {
             </Tabs>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Platform Configuration Modal */}
-      {selectedPlatform && (
-        <PlatformConfigModal
-          open={isModalOpen}
-          onOpenChange={setIsModalOpen}
-          platform={selectedPlatform.platform}
-          platformName={selectedPlatform.name}
-          currentEmail={getIntegrationEmail(selectedPlatform.platform)}
-          isConnected={getIntegrationStatus(selectedPlatform.platform) === 'connected'}
-          onConnect={handleConnect}
-          onTestConnection={handleTestConnection}
-          onDisconnect={handleDisconnect}
+        <UserIntegrationDialog 
+          open={isUserIntegrationModalOpen}
+          onOpenChange={setIsUserIntegrationModalOpen}
+          onSubmit={handleAddUserIntegration}
+          isSubmitting={createUserMutation.isPending}
+          user={selectedUser}
+          onTestConnection={(email) => connectUserMutation.mutate(email)}
+          onConnect={(email) => connectUserMutation.mutate(email)}
         />
-      )}
 
-      <UserIntegrationDialog 
-        open={isUserIntegrationModalOpen}
-        onOpenChange={setIsUserIntegrationModalOpen}
-        onSubmit={handleAddUserIntegration}
-        isSubmitting={createUserMutation.isPending}
-        user={selectedUser}
-        onTestConnection={(email) => connectUserMutation.mutate(email)}
-      />
-
+      </div>
     </Layout>
   );
 }
