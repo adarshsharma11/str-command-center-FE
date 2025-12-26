@@ -1,34 +1,27 @@
-import { useMutation, type UseMutationOptions } from '@tanstack/react-query';
+import { useMutation, useQuery, type UseMutationOptions, type UseQueryOptions } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 
 export type PlatformType = 'airbnb' | 'vrbo' | 'booking_com' | 'stripe';
 
-export type IntegrationStatus = 'connected' | 'not_connected' | 'error' | 'testing';
+export type IntegrationStatus = 'connected' | 'not_connected' | 'error' | 'testing' | 'active' | 'inactive';
 
-export type IntegrationApiItem = {
-  id: number;
-  platform: PlatformType;
+export type IntegrationUser = {
+  email: string;
   status: IntegrationStatus;
-  email?: string;
-  last_sync_at?: string;
-  created_at?: string;
-  updated_at?: string;
 };
 
-export type PlatformCredentials = {
+export type CreateIntegrationUserPayload = {
   email: string;
   password: string;
 };
 
-export type ConnectIntegrationPayload = {
-  platform: PlatformType;
-  credentials: PlatformCredentials;
-};
+// Alias for platform credentials
+export type PlatformCredentials = CreateIntegrationUserPayload;
 
-export type TestConnectionPayload = {
-  platform: PlatformType;
-  credentials?: PlatformCredentials;
+export type ConnectionData = {
+  email?: string;
+  [key: string]: unknown;
 };
 
 type ApiResponse<T> = {
@@ -37,65 +30,88 @@ type ApiResponse<T> = {
   data?: T;
 };
 
-type IntegrationListResponse = {
+export type IntegrationListResponse = {
   success?: boolean;
   message?: string;
-  data: IntegrationApiItem[];
+  data: IntegrationUser[];
 };
 
+// --- User Integration API Functions ---
 
-
-async function connectIntegration(payload: ConnectIntegrationPayload): Promise<ApiResponse<IntegrationApiItem>> {
-  const { platform, credentials } = payload;
-  const encodedEmail = encodeURIComponent(credentials.email);
-  const endpoint = ENDPOINTS.INTEGRATIONS.CONNECT.replace(':email', encodedEmail);
-  return apiClient.post<ApiResponse<IntegrationApiItem>>(
-    endpoint,
-    { platform, ...credentials }
-  );
+async function fetchIntegrationUsers(): Promise<IntegrationListResponse> {
+  return apiClient.get<IntegrationListResponse>(ENDPOINTS.INTEGRATIONS.LIST);
 }
 
-async function disconnectIntegration(platform: PlatformType): Promise<ApiResponse<void>> {
-  const endpoint = ENDPOINTS.INTEGRATIONS.DISCONNECT.replace(':platform', platform);
-  return apiClient.delete<ApiResponse<void>>(endpoint);
+async function createIntegrationUser(payload: CreateIntegrationUserPayload): Promise<ApiResponse<IntegrationUser>> {
+  return apiClient.post<ApiResponse<IntegrationUser>>(ENDPOINTS.INTEGRATIONS.CREATE, payload);
 }
 
-async function testConnection(payload: TestConnectionPayload): Promise<ApiResponse<{ status: 'success' | 'failed' }>> {
-  const { platform, credentials } = payload;
-  
-  if (credentials) {
-    const encodedEmail = encodeURIComponent(credentials.email);
-    const endpoint = ENDPOINTS.INTEGRATIONS.CONNECT.replace(':email', encodedEmail);
-    return apiClient.post<ApiResponse<{ status: 'success' | 'failed' }>>(endpoint, { platform, ...credentials });
-  } else {
-    const endpoint = ENDPOINTS.INTEGRATIONS.DISCONNECT.replace(':platform', platform);
-    return apiClient.post<ApiResponse<{ status: 'success' | 'failed' }>>(`${endpoint}/test`);
-  }
+async function connectIntegrationUser(email: string): Promise<ApiResponse<ConnectionData>> {
+  const encodedEmail = encodeURIComponent(email);
+  const endpoint = ENDPOINTS.INTEGRATIONS.USER_CONNECT.replace(':email', encodedEmail);
+  return apiClient.post<ApiResponse<ConnectionData>>(endpoint);
 }
 
-// React Query Hooks
-export const useConnectIntegrationMutation = (options?: UseMutationOptions<ApiResponse<IntegrationApiItem>, Error, ConnectIntegrationPayload>) => {
-  return useMutation({
-    mutationFn: connectIntegration,
+// --- Platform Integration API Functions ---
+
+async function connectPlatform(payload: { platform: PlatformType; credentials: PlatformCredentials }): Promise<ApiResponse<ConnectionData>> {
+  const endpoint = ENDPOINTS.INTEGRATIONS.PLATFORM_CONNECT.replace(':platform', payload.platform);
+  return apiClient.post<ApiResponse<ConnectionData>>(endpoint, payload.credentials);
+}
+
+async function disconnectPlatform(platform: PlatformType): Promise<ApiResponse<ConnectionData>> {
+  const endpoint = ENDPOINTS.INTEGRATIONS.PLATFORM_DISCONNECT.replace(':platform', platform);
+  return apiClient.delete<ApiResponse<ConnectionData>>(endpoint);
+}
+
+async function testPlatformConnection(payload: { platform: PlatformType; credentials: PlatformCredentials }): Promise<ApiResponse<ConnectionData>> {
+  const endpoint = ENDPOINTS.INTEGRATIONS.PLATFORM_TEST.replace(':platform', payload.platform);
+  return apiClient.post<ApiResponse<ConnectionData>>(endpoint, payload.credentials);
+}
+
+// --- React Query Hooks ---
+
+export const useIntegrationUsersQuery = (options?: UseQueryOptions<IntegrationListResponse, Error>) => {
+  return useQuery({
+    queryKey: ['integration-users'],
+    queryFn: fetchIntegrationUsers,
     ...options,
   });
 };
 
-export const useDisconnectIntegrationMutation = (options?: UseMutationOptions<ApiResponse<void>, Error, PlatformType>) => {
+export const useCreateIntegrationUserMutation = (options?: UseMutationOptions<ApiResponse<IntegrationUser>, Error, CreateIntegrationUserPayload>) => {
   return useMutation({
-    mutationFn: disconnectIntegration,
+    mutationFn: createIntegrationUser,
     ...options,
   });
 };
 
-// ============================================================
-// TEST CONNECTION MUTATION
-// Tests if platform credentials are valid
-// Returns { status: 'success' | 'failed' }
-// ============================================================
-export const useTestConnectionMutation = (options?: UseMutationOptions<ApiResponse<{ status: 'success' | 'failed' }>, Error, TestConnectionPayload>) => {
+export const useConnectIntegrationUserMutation = (options?: UseMutationOptions<ApiResponse<ConnectionData>, Error, string>) => {
   return useMutation({
-    mutationFn: testConnection,
+    mutationFn: connectIntegrationUser,
+    ...options,
+  });
+};
+
+// --- Platform Hooks ---
+
+export const useConnectIntegrationMutation = (options?: UseMutationOptions<ApiResponse<ConnectionData>, Error, { platform: PlatformType; credentials: PlatformCredentials }>) => {
+  return useMutation({
+    mutationFn: connectPlatform,
+    ...options,
+  });
+};
+
+export const useDisconnectIntegrationMutation = (options?: UseMutationOptions<ApiResponse<ConnectionData>, Error, PlatformType>) => {
+  return useMutation({
+    mutationFn: disconnectPlatform,
+    ...options,
+  });
+};
+
+export const useTestConnectionMutation = (options?: UseMutationOptions<ApiResponse<ConnectionData>, Error, { platform: PlatformType; credentials: PlatformCredentials }>) => {
+  return useMutation({
+    mutationFn: testPlatformConnection,
     ...options,
   });
 };

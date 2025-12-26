@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Pencil } from 'lucide-react';
+import { Loader2, Pencil, Plus } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,9 +21,13 @@ import {
   useConnectIntegrationMutation, 
   useDisconnectIntegrationMutation,
   useTestConnectionMutation,
+  useIntegrationUsersQuery,
+  useCreateIntegrationUserMutation,
+  useConnectIntegrationUserMutation,
   type PlatformType,
   type PlatformCredentials 
 } from '@/lib/api/integrations';
+import { UserIntegrationDialog } from '@/components/integrations/UserIntegrationDialog';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Settings() {
@@ -32,9 +36,13 @@ export default function Settings() {
   const [selectedPlatform, setSelectedPlatform] = useState<{ platform: PlatformType; name: string } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [isUserIntegrationModalOpen, setIsUserIntegrationModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{ email: string; status: string } | null>(null);
   const [editingCategory, setEditingCategory] = useState<ServiceCategory | null>(null);
   
   const { data: serviceCategoriesData, isLoading: isLoadingServices } = useServiceCategoriesQuery();
+  const { data: usersData, isLoading: isLoadingUsers } = useIntegrationUsersQuery();
+  
   const updateServiceStatusMutation = useUpdateServiceCategoryStatusMutation({
     onSuccess: () => {
       toast({ title: 'Status updated', description: 'Service category status has been updated.' });
@@ -42,6 +50,26 @@ export default function Settings() {
     },
     onError: (err) => {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  });
+
+  const createUserMutation = useCreateIntegrationUserMutation({
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'User integration added successfully.' });
+      queryClient.invalidateQueries({ queryKey: ['integration-users'] });
+      setIsUserIntegrationModalOpen(false);
+    },
+    onError: (err) => {
+      toast({ title: 'Error', description: err.message || 'Failed to add user integration.', variant: 'destructive' });
+    }
+  });
+
+  const connectUserMutation = useConnectIntegrationUserMutation({
+    onSuccess: (data) => {
+      toast({ title: 'Success', description: data.message || 'Connection test successful.' });
+    },
+    onError: (err) => {
+      toast({ title: 'Error', description: err.message || 'Connection test failed.', variant: 'destructive' });
     }
   });
 
@@ -172,7 +200,9 @@ export default function Settings() {
     setIsModalOpen(true);
   };
 
-
+  const handleAddUserIntegration = async (values: { email: string; password: string }) => {
+    await createUserMutation.mutateAsync(values);
+  };
 
   return (
     <Layout>
@@ -323,12 +353,24 @@ export default function Settings() {
               <TabsContent value="integrations" className="space-y-4 mt-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Platform Integrations</CardTitle>
-                    <CardDescription>
-                      Connect to booking platforms and channel managers
-                    </CardDescription>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Integrations</CardTitle>
+                        <CardDescription>
+                          Manage your connected platforms and user accounts
+                        </CardDescription>
+                      </div>
+                      <Button size="sm" onClick={() => {
+                        setSelectedUser(null);
+                        setIsUserIntegrationModalOpen(true);
+                      }}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add User Integration
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    {/* Platform Integrations */}
                     {platforms.map(({ platform, name }) => {
                       const status = getIntegrationStatus(platform);
                       const email = getIntegrationEmail(platform);
@@ -360,6 +402,37 @@ export default function Settings() {
                         </div>
                       );
                     })}
+
+                    {/* User Integrations */}
+                    {isLoadingUsers ? (
+                      <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
+                    ) : (
+                      <>
+                        {usersData?.data?.map((user) => (
+                          <div key={user.email}>
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <p className="font-medium text-foreground">{user.email}</p>
+                                <p className={`text-sm ${user.status === 'active' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                  Status: {user.status}
+                                </p>
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setIsUserIntegrationModalOpen(true);
+                                }}
+                              >
+                                Configure
+                              </Button>
+                            </div>
+                            <Separator />
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -455,6 +528,14 @@ export default function Settings() {
         />
       )}
 
+      <UserIntegrationDialog 
+        open={isUserIntegrationModalOpen}
+        onOpenChange={setIsUserIntegrationModalOpen}
+        onSubmit={handleAddUserIntegration}
+        isSubmitting={createUserMutation.isPending}
+        user={selectedUser}
+        onTestConnection={(email) => connectUserMutation.mutate(email)}
+      />
 
     </Layout>
   );

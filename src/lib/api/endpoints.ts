@@ -23,10 +23,21 @@ export const ENDPOINTS = {
     DETAIL: `${API_PREFIX}/service-categories/:id`,
     STATUS: `${API_PREFIX}/service-categories/:id/status`,
   },
+  ACTIVITY_RULES: {
+    LIST: `${API_PREFIX}/activity-rules`,
+    DETAIL: `${API_PREFIX}/activity-rules/:id`,
+    STATUS: `${API_PREFIX}/activity-rules/:id/status`,
+  },
   INTEGRATIONS: {
+    // User endpoints
     LIST: `${API_PREFIX}/users`,
-    CONNECT: `${API_PREFIX}/users/:email/connect`,
-    TEST: `${API_PREFIX}/users/:email/test`,
-    DISCONNECT: `${API_PREFIX}/users/integrations/:platform`,
+    CREATE: `${API_PREFIX}/users`,
+    USER_CONNECT: `${API_PREFIX}/users/:email/connect`,
+    USER_TEST: `${API_PREFIX}/users/:email/test`,
+    
+    // Platform endpoints
+    PLATFORM_CONNECT: `${API_PREFIX}/users/integrations/:platform/connect`,
+    PLATFORM_DISCONNECT: `${API_PREFIX}/users/integrations/:platform`,
+    PLATFORM_TEST: `${API_PREFIX}/users/integrations/:platform/test`,
   },
 } as const;

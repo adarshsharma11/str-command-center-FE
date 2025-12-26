@@ -49,10 +49,19 @@ class ApiClient {
     });
   }
 
-  async patch<T>(endpoint: string, data: unknown): Promise<T> {
-    return this.request<T>(endpoint, {
+  async patch<T>(endpoint: string, data?: unknown, queryParams?: Record<string, string | number | boolean>): Promise<T> {
+    let fullEndpoint = endpoint;
+    if (queryParams) {
+      const searchParams = new URLSearchParams();
+      Object.entries(queryParams).forEach(([key, value]) => {
+        searchParams.append(key, String(value));
+      });
+      fullEndpoint += `?${searchParams.toString()}`;
+    }
+    
+    return this.request<T>(fullEndpoint, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: data ? JSON.stringify(data) : undefined,
     });
   }
 
