@@ -6,14 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Zap, Pencil } from 'lucide-react';
-import { mockExecutionLogs } from '@/lib/mockData';
-import { useActivityRulesQuery, useUpdateActivityRuleStatusMutation, type ActivityRule } from '@/lib/api/activity-rules';
+import { useActivityRulesQuery, useUpdateActivityRuleStatusMutation, useAutomationLogsQuery, type ActivityRule } from '@/lib/api/activity-rules';
 import { ActivityRuleDialog } from '@/components/automation/ActivityRuleDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function Automation() {
   const { data: rulesData, isLoading, error } = useActivityRulesQuery();
+  const { data: logsData, isLoading: isLoadingLogs } = useAutomationLogsQuery();
   const updateStatusMutation = useUpdateActivityRuleStatusMutation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -21,8 +21,8 @@ export default function Automation() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [ruleToEdit, setRuleToEdit] = useState<ActivityRule | null>(null);
 
-  // Use mock logs for now as there is no API for logs yet
-  const logs = mockExecutionLogs;
+  // Use real logs if available, otherwise fallback to mock (or just use real)
+  const logs = logsData?.data || [];
 
   const handleCreateRule = () => {
     setRuleToEdit(null);
@@ -106,9 +106,15 @@ export default function Automation() {
                           <Badge variant="outline">Priority: {rule.priority}</Badge>
                           <Badge variant="secondary">Slug: {rule.slug_name}</Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          Condition: {rule.condition.field} {rule.condition.operator} {rule.condition.value}
-                        </p>
+                        {rule.condition ? (
+                            <p className="text-sm text-muted-foreground">
+                            Condition: {rule.condition.field} {rule.condition.operator} {rule.condition.value}
+                            </p>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                            Condition: None
+                            </p>
+                        )}
                         {rule.description && (
                             <p className="text-sm text-muted-foreground mt-1">
                             {rule.description}
@@ -160,10 +166,10 @@ export default function Automation() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                 {logs.map((log) => (
-                    <TableRow key={log.id}>
-                        <TableCell>{log.timestamp.toLocaleString()}</TableCell>
-                        <TableCell>{log.ruleName}</TableCell>
+                 {logs.map((log, index) => (
+                    <TableRow key={index}>
+                        <TableCell>{log.created_at}</TableCell>
+                        <TableCell>{log.rule_name}</TableCell>
                         <TableCell>{log.outcome}</TableCell>
                     </TableRow>
                  ))}

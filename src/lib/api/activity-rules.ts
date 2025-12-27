@@ -12,7 +12,7 @@ export type ActivityRule = {
   id: number;
   rule_name: string;
   slug_name: string;
-  condition: ActivityRuleCondition;
+  condition?: ActivityRuleCondition;
   priority: string;
   description?: string;
   status: boolean;
@@ -23,7 +23,7 @@ export type ActivityRule = {
 export type CreateActivityRulePayload = {
   rule_name: string;
   slug_name: string;
-  condition: ActivityRuleCondition;
+  condition?: ActivityRuleCondition;
   priority: string;
   description?: string;
   status: boolean;
@@ -43,10 +43,26 @@ type ActivityRuleResponse = {
   data: ActivityRule;
 };
 
+export type AutomationLog = {
+  rule_name: string;
+  outcome: string;
+  created_at: string;
+};
+
+export type AutomationLogsResponse = {
+  success: boolean;
+  message: string;
+  data: AutomationLog[];
+};
+
 // --- API Functions ---
 
 export async function fetchActivityRules(): Promise<ActivityRuleListResponse> {
   return apiClient.get<ActivityRuleListResponse>(ENDPOINTS.ACTIVITY_RULES.LIST);
+}
+
+export async function fetchAutomationLogs(): Promise<AutomationLogsResponse> {
+  return apiClient.get<AutomationLogsResponse>(ENDPOINTS.ACTIVITY_RULES.LOGS);
 }
 
 export async function fetchActivityRule(id: number): Promise<ActivityRuleResponse> {
@@ -74,6 +90,15 @@ export function useActivityRulesQuery(options?: UseQueryOptions<ActivityRuleList
   return useQuery<ActivityRuleListResponse, Error>({
     queryKey: ['activity-rules'],
     queryFn: () => fetchActivityRules(),
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
+export function useAutomationLogsQuery(options?: UseQueryOptions<AutomationLogsResponse, Error>) {
+  return useQuery<AutomationLogsResponse, Error>({
+    queryKey: ['automation-logs'],
+    queryFn: () => fetchAutomationLogs(),
     staleTime: 30_000,
     ...options,
   });
