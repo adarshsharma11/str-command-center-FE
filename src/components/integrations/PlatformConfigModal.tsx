@@ -186,34 +186,21 @@ export function PlatformConfigModal({
           )}
 
           <DialogFooter className="flex gap-2 sm:gap-0">
-            {!isConnected && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleTestConnection}
-                disabled={isSubmitting || isTesting}
-              >
-                {isTesting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Testing...
-                  </>
-                ) : (
-                  'Test Connection'
-                )}
-              </Button>
-            )}
-
-            {isConnected && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDisconnect}
-                disabled={isSubmitting || isTesting}
-              >
-                Disconnect
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleTestConnection}
+              disabled={isSubmitting || isTesting}
+            >
+              {isTesting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                'Test Connection'
+              )}
+            </Button>
 
             <Button
               type="submit"
