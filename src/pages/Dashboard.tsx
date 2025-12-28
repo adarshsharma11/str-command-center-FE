@@ -3,50 +3,82 @@ import { KPICard } from '@/components/KPICard';
 import { PriorityTaskWidget } from '@/components/PriorityTaskWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockKPIs, mockTasks, mockServices, mockLocationStats, mockProperties, mockBookings } from '@/lib/mockData';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, MapPin, Home, Sparkles } from 'lucide-react';
+import { MapPin, Home, Sparkles, Loader2 } from 'lucide-react';
+import { useDashboardMetricsQuery } from '@/lib/api/dashboard';
+import { KPI, Task, Priority, TaskType, TaskStatus } from '@/types';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { data: dashboardData, isLoading, error } = useDashboardMetricsQuery();
 
-  // TODO: INTEGRATION STUB: Replace with Supabase queries
-  const kpis = mockKPIs;
-  const tasks = mockTasks.filter(t => t.priority === 'P1' || t.priority === 'P2');
-  const services = mockServices;
-  const locationStats = mockLocationStats;
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
 
-  // Calculate top performing properties
-  const propertyRevenue = mockBookings.reduce((acc, booking) => {
-    if (!acc[booking.propertyId]) {
-      acc[booking.propertyId] = { 
-        name: booking.propertyName, 
-        revenue: 0, 
-        bookings: 0 
-      };
-    }
-    acc[booking.propertyId].revenue += booking.totalAmount;
-    acc[booking.propertyId].bookings += 1;
-    return acc;
-  }, {} as Record<string, { name: string; revenue: number; bookings: number }>);
+  if (error || !dashboardData?.data) {
+    return (
+      <Layout>
+        <div className="p-6">
+          <div className="text-red-500">Error loading dashboard data: {error?.message || 'Unknown error'}</div>
+        </div>
+      </Layout>
+    );
+  }
 
-  const topProperties = Object.entries(propertyRevenue)
-    .sort(([, a], [, b]) => b.revenue - a.revenue)
-    .slice(0, 3);
+  const { data } = dashboardData;
 
-  // Calculate service type revenue
-  const serviceRevenue = services.reduce((acc, service) => {
-    if (!acc[service.type]) {
-      acc[service.type] = { count: 0, revenue: 0 };
-    }
-    acc[service.type].count += 1;
-    acc[service.type].revenue += service.price;
-    return acc;
-  }, {} as Record<string, { count: number; revenue: number }>);
+  // Map API data to KPIs
+  const kpis: KPI[] = [
+    {
+      label: 'Total Revenue',
+      value: `$${data.total_revenue.value.toLocaleString()}`,
+      change: data.total_revenue.percentage_change,
+      changeLabel: data.total_revenue.label,
+      trend: data.total_revenue.trend_direction,
+    },
+    {
+      label: 'Property Revenue',
+      value: `$${data.property_revenue.value.toLocaleString()}`,
+      change: data.property_revenue.percentage_change,
+      changeLabel: data.property_revenue.label,
+      trend: data.property_revenue.trend_direction,
+    },
+    {
+      label: 'Service Revenue',
+      value: `$${data.service_revenue.value.toLocaleString()}`,
+      change: data.service_revenue.percentage_change,
+      changeLabel: data.service_revenue.label,
+      trend: data.service_revenue.trend_direction,
+    },
+    {
+      label: 'Active Bookings',
+      value: data.active_bookings.value,
+      change: data.active_bookings.percentage_change,
+      changeLabel: data.active_bookings.label,
+      trend: data.active_bookings.trend_direction,
+    },
+  ];
 
-  const topServices = Object.entries(serviceRevenue)
-    .sort(([, a], [, b]) => b.revenue - a.revenue)
-    .slice(0, 5);
+  // Map API tasks to Task interface
+  // Note: API provides a simplified task object, so we map it to the internal Task interface
+  // filling in missing required fields with placeholders or derived values.
+  const tasks: Task[] = data.priority_tasks.map((t) => ({
+    id: t.id.toString(),
+    title: t.title,
+    type: t.type as TaskType,
+    priority: t.priority as Priority,
+    status: (t.status === 'urgent' ? 'Pending' : 'In Progress') as TaskStatus, // Mapping status roughly
+    dueDate: new Date(t.due_date),
+    description: t.title, // Fallback
+    propertyId: 'unknown', // Fallback
+  }));
 
   return (
     <Layout>
@@ -81,19 +113,19 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {topProperties.map(([propertyId, data], index) => (
-                <div key={propertyId} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              {data.top_performing_properties.map((property, index) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold">
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{data.name}</p>
-                      <p className="text-sm text-muted-foreground">{data.bookings} bookings</p>
+                      <p className="font-medium text-foreground">{property.name}</p>
+                      <p className="text-sm text-muted-foreground">{property.bookings_count} bookings</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-foreground">${data.revenue.toLocaleString()}</p>
+                    <p className="font-semibold text-foreground">${property.revenue.toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">revenue</p>
                   </div>
                 </div>
@@ -109,13 +141,13 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {topServices.map(([serviceType, data]) => (
-                <div key={serviceType} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              {data.luxury_services_revenue.map((service, index) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <div>
-                    <p className="font-medium text-foreground">{serviceType}</p>
-                    <p className="text-sm text-muted-foreground">{data.count} bookings</p>
+                    <p className="font-medium text-foreground">{service.name}</p>
+                    <p className="text-sm text-muted-foreground">{service.bookings_count} bookings</p>
                   </div>
-                  <p className="font-semibold text-foreground">${data.revenue.toLocaleString()}</p>
+                  <p className="font-semibold text-foreground">${service.revenue.toLocaleString()}</p>
                 </div>
               ))}
             </CardContent>
@@ -132,10 +164,10 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {locationStats.map((location) => (
-                <div key={location.region} className="space-y-2">
+              {data.guest_origins.map((location, index) => (
+                <div key={index} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-foreground">{location.region}</span>
+                    <span className="text-sm font-medium text-foreground">{location.origin}</span>
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-muted-foreground">
                         {location.bookings} bookings

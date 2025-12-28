@@ -29,6 +29,9 @@ export const ENDPOINTS = {
     STATUS: `${API_PREFIX}/activity-rules/:id/status`,
     LOGS: `${API_PREFIX}/automation/logs`,
   },
+  DASHBOARD: {
+    METRICS: `${API_PREFIX}/dashboard`,
+  },
   INTEGRATIONS: {
     // User endpoints
     LIST: `${API_PREFIX}/users`,
