@@ -37,37 +37,31 @@ const AUTH_MODES = {
 type AuthMode = (typeof AUTH_MODES)[keyof typeof AUTH_MODES];
 
 // -------------------------------------------------------------
-// YUP SCHEMA WITH CONTEXT
+// YUP SCHEMAS FOR EACH MODE
 // -------------------------------------------------------------
 
-const baseSchema = yup.object({
-  first_name: yup.string().when("$mode", {
-    is: AUTH_MODES.SIGNUP,
-    then: (schema) => schema.min(2, "First name must be at least 2 characters").required("First name is required"),
-    otherwise: (schema) => schema.optional(),
-  }),
-  last_name: yup.string().when("$mode", {
-    is: AUTH_MODES.SIGNUP,
-    then: (schema) => schema.min(2, "Last name must be at least 2 characters").required("Last name is required"),
-    otherwise: (schema) => schema.optional(),
-  }),
+const loginSchema = yup.object({
+  first_name: yup.string().optional(),
+  last_name: yup.string().optional(),
   email: yup
     .string()
     .email("Enter a valid email")
     .required("Email is required"),
+  password: yup.string().required("Password is required"),
+});
 
-  password: yup.string().when("$mode", {
-    is: AUTH_MODES.SIGNUP,
-    then: (schema) =>
-      schema
-        .min(6, "Password must be at least 6 characters")
-        .required("Password is required"),
-    otherwise: (schema) => schema.required("Password is required"),
-  }),
+const signupSchema = yup.object({
+  first_name: yup.string().min(2, "First name must be at least 2 characters").required("First name is required"),
+  last_name: yup.string().min(2, "Last name must be at least 2 characters").required("Last name is required"),
+  email: yup
+    .string()
+    .email("Enter a valid email")
+    .required("Email is required"),
+  password: yup.string().min(6, "Password must be at least 6 characters").required("Password is required"),
 });
 
 // Final type extracted from base schema
-type AuthValues = yup.InferType<typeof baseSchema>;
+type AuthValues = yup.InferType<typeof signupSchema>;
 
 // -------------------------------------------------------------
 // COMPONENT
@@ -83,9 +77,7 @@ export default function Auth() {
   // Memoized resolver context
   const resolver = useMemo(
     () =>
-      yupResolver(baseSchema, {
-        context: { mode },
-      }),
+      mode === AUTH_MODES.SIGNUP ? yupResolver(signupSchema) : yupResolver(loginSchema),
     [mode]
   );
 
@@ -96,13 +88,13 @@ export default function Auth() {
     formState: { errors, isSubmitting },
   } = useForm<AuthValues>({
     resolver,
-    mode: "onSubmit",
+    mode: "onChange",
     reValidateMode: "onChange",
   });
 
   // Reset form when switching tabs (clean UX)
   useEffect(() => {
-    reset({ email: "", password: "" });
+    reset({ email: "", password: "", first_name: "", last_name: "" });
   }, [mode, reset]);
 
   // -------------------------------------------------------------
@@ -213,14 +205,14 @@ function AuthForm({
             <Label>First name</Label>
             <Input placeholder="Jane" type="text" {...register("first_name")} />
             {errors.first_name && (
-              <p className="text-sm text-red-500">{errors.first_name.message as string}</p>
+              <p className="text-sm text-destructive">{errors.first_name.message as string}</p>
             )}
           </div>
           <div className="space-y-2">
             <Label>Last name</Label>
             <Input placeholder="Doe" type="text" {...register("last_name")} />
             {errors.last_name && (
-              <p className="text-sm text-red-500">{errors.last_name.message as string}</p>
+              <p className="text-sm text-destructive">{errors.last_name.message as string}</p>
             )}
           </div>
         </>
@@ -234,7 +226,7 @@ function AuthForm({
           {...register("email")}
         />
         {errors.email && (
-          <p className="text-sm text-red-500">
+          <p className="text-sm text-destructive">
             {errors.email.message}
           </p>
         )}
@@ -249,7 +241,7 @@ function AuthForm({
           {...register("password")}
         />
         {errors.password && (
-          <p className="text-sm text-red-500">
+          <p className="text-sm text-destructive">
             {errors.password.message}
           </p>
         )}
