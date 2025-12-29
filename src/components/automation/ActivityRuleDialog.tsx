@@ -32,6 +32,7 @@ import {
   useCreateActivityRuleMutation,
   useUpdateActivityRuleMutation,
   type ActivityRule,
+  type ActivityRuleCondition,
 } from '@/lib/api/activity-rules';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -40,9 +41,9 @@ const formSchema = z.object({
   slug_name: z.string().min(1, 'Slug name is required'),
   priority: z.string().min(1, 'Priority is required'),
   description: z.string().optional(),
-  condition_field: z.string().min(1, 'Field is required'),
-  condition_operator: z.string().min(1, 'Operator is required'),
-  condition_value: z.string().min(1, 'Value is required'),
+  condition_field: z.string().optional(),
+  condition_operator: z.string().optional(),
+  condition_value: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -81,9 +82,9 @@ export function ActivityRuleDialog({
         slug_name: ruleToEdit.slug_name,
         priority: ruleToEdit.priority,
         description: ruleToEdit.description || '',
-        condition_field: ruleToEdit.condition.field,
-        condition_operator: ruleToEdit.condition.operator,
-        condition_value: String(ruleToEdit.condition.value),
+        condition_field: ruleToEdit.condition?.field || 'total_amount',
+        condition_operator: ruleToEdit.condition?.operator || 'gte',
+        condition_value: ruleToEdit.condition?.value !== undefined ? String(ruleToEdit.condition.value) : '',
       });
     } else {
       form.reset({
@@ -137,13 +138,23 @@ export function ActivityRuleDialog({
   });
 
   const onSubmit = (values: FormValues) => {
-    let finalValue: string | number | boolean = values.condition_value;
-    if (values.condition_field === 'total_amount' || values.condition_field === 'guests' || values.condition_field === 'nights') {
-        const num = parseFloat(values.condition_value);
-        if (!isNaN(num)) finalValue = num;
+    let finalCondition: ActivityRuleCondition | undefined;
+
+    if (values.condition_field && values.condition_operator && values.condition_value) {
+        let finalValue: string | number | boolean = values.condition_value;
+        if (values.condition_field === 'total_amount' || values.condition_field === 'guests' || values.condition_field === 'nights') {
+            const num = parseFloat(values.condition_value);
+            if (!isNaN(num)) finalValue = num;
+        }
+        if (values.condition_value === 'true') finalValue = true;
+        if (values.condition_value === 'false') finalValue = false;
+
+        finalCondition = {
+            field: values.condition_field,
+            operator: values.condition_operator,
+            value: finalValue
+        };
     }
-    if (values.condition_value === 'true') finalValue = true;
-    if (values.condition_value === 'false') finalValue = false;
 
     const payload = {
         rule_name: values.rule_name,
@@ -151,11 +162,7 @@ export function ActivityRuleDialog({
         priority: values.priority,
         description: values.description,
         status: ruleToEdit ? ruleToEdit.status : true,
-        condition: {
-            field: values.condition_field,
-            operator: values.condition_operator,
-            value: finalValue
-        }
+        condition: finalCondition
     };
 
     if (ruleToEdit) {

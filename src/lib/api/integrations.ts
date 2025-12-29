@@ -9,7 +9,7 @@ export type IntegrationStatus = 'connected' | 'not_connected' | 'error' | 'testi
 export type IntegrationUser = {
   email: string;
   status: IntegrationStatus;
-  platform?: string;
+  platform?: PlatformType;
 };
 
 export type CreateIntegrationUserPayload = {
