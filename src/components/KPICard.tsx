@@ -26,10 +26,10 @@ export function KPICard({ kpi, onClick }: KPICardProps) {
       onClick={onClick}
     >
       <CardContent className="pt-6">
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <p className="text-sm font-medium text-muted-foreground">{kpi.label}</p>
-          <div className="flex items-baseline justify-between">
-            <h3 className="text-3xl font-bold text-foreground">{kpi.value}</h3>
+          <h3 className="text-2xl font-bold text-foreground">{kpi.value}</h3>
+          <div className="flex items-center gap-2">
             {kpi.trend && kpi.change !== undefined && (
               <div className="flex items-center gap-1">
                 {trendIcon[kpi.trend]}
@@ -38,10 +38,10 @@ export function KPICard({ kpi, onClick }: KPICardProps) {
                 </span>
               </div>
             )}
+            {kpi.changeLabel && (
+              <p className="text-xs text-muted-foreground">{kpi.changeLabel}</p>
+            )}
           </div>
-          {kpi.changeLabel && (
-            <p className="text-xs text-muted-foreground">{kpi.changeLabel}</p>
-          )}
         </div>
       </CardContent>
     </Card>
