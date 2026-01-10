@@ -1,16 +1,29 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { FolderSidebar } from '@/components/inbox/FolderSidebar';
 import { MasterThreadList } from '@/components/inbox/MasterThreadList';
 import { MessagePanel } from '@/components/inbox/MessagePanel';
-import { mockFolders, mockThreads } from '@/components/inbox/mockInboxData';
+import { mockFolders } from '@/components/inbox/mockInboxData';
 import type { InboxFolder, InboxThread } from '@/components/inbox/types';
+import { useInboxQuery, mapInboxThreads, type InboxFilters } from '@/lib/api/emails';
+import { Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
 export default function Inbox() {
   const [folders, setFolders] = useState<InboxFolder[]>(mockFolders);
-  const [threads, setThreads] = useState<InboxThread[]>(mockThreads);
+  const [threads, setThreads] = useState<InboxThread[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedThread, setSelectedThread] = useState<InboxThread | null>(null);
+  const [filters, setFilters] = useState<InboxFilters>({ folder: 'INBOX', limit: 50 });
+  const { data: inboxResp, isLoading, error } = useInboxQuery(filters);
+
+  useEffect(() => {
+    if (inboxResp) {
+      setThreads(mapInboxThreads(inboxResp));
+    }
+  }, [inboxResp]);
 
   const filteredThreads = useMemo(() => {
     if (!selectedFolderId) return threads;
@@ -64,6 +77,46 @@ export default function Inbox() {
   return (
     <Layout>
       <div className="flex h-[calc(100vh-4rem)]">
+        {isLoading && (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        )}
+        {!isLoading && error && (
+          <div className="flex-1 p-6 text-red-500">
+            Error loading inbox
+          </div>
+        )}
+        {!isLoading && !error && (
+        <>
+        <div className="w-full px-4 py-3 border-b border-border bg-background flex items-center gap-3">
+          <div className="w-40">
+            <Select
+              value={filters.folder || 'INBOX'}
+              onValueChange={(v) => setFilters((prev) => ({ ...prev, folder: v as 'INBOX' | 'SENT' }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Folder" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="INBOX">INBOX</SelectItem>
+                <SelectItem value="SENT">SENT</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Input
+            value={filters.q || ''}
+            onChange={(e) => setFilters((prev) => ({ ...prev, q: e.target.value }))}
+            placeholder="Search subject or text"
+            className="max-w-sm"
+          />
+          <Button
+            variant="secondary"
+            onClick={() => setFilters((prev) => ({ ...prev }))}
+          >
+            Search
+          </Button>
+        </div>
         <FolderSidebar
           folders={folders}
           selectedFolderId={selectedFolderId}
@@ -98,6 +151,8 @@ export default function Inbox() {
             onMoveToFolder={handleMoveToFolder}
           />
         </div>
+        </>
+        )}
       </div>
     </Layout>
   );

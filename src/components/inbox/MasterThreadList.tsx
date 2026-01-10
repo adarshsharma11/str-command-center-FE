@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Star, Mail, MessageCircle, Facebook, Instagram, MessageSquare, MoreHorizontal } from 'lucide-react';
+import { Star, Mail, MessageCircle, Facebook, Instagram, MessageSquare, MoreHorizontal, Home } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
@@ -21,6 +21,7 @@ const platformIcons: Record<string, React.ElementType> = {
   facebook: Facebook,
   instagram: Instagram,
   sms: MessageSquare,
+  airbnb: Home,
   other: MessageCircle,
 };
 
@@ -30,6 +31,7 @@ const platformColors: Record<string, string> = {
   facebook: 'text-blue-600',
   instagram: 'text-pink-500',
   sms: 'text-primary',
+  airbnb: 'text-rose-500',
   other: 'text-muted-foreground',
 };
 

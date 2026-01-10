@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { Send, Paperclip, X, Mail, MessageCircle, Facebook, Instagram, MessageSquare } from 'lucide-react';
+import { Send, Paperclip, X, Mail, MessageCircle, Facebook, Instagram, MessageSquare, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import type { InboxThread, InboxFolder } from './types';
+import type { InboxThread, InboxFolder, InboxMessage } from './types';
+import { useEmailQuery, useReplyMutation, mapEmailMessages } from '@/lib/api/emails';
+import { Loader2 } from 'lucide-react';
 
 interface MessagePanelProps {
   thread: InboxThread | null;
@@ -22,6 +24,7 @@ const platformIcons: Record<string, React.ElementType> = {
   facebook: Facebook,
   instagram: Instagram,
   sms: MessageSquare,
+  airbnb: Home,
   other: MessageCircle,
 };
 
@@ -31,11 +34,37 @@ const platformLabels: Record<string, string> = {
   facebook: 'Facebook',
   instagram: 'Instagram',
   sms: 'SMS',
+  airbnb: 'Airbnb',
   other: 'Message',
 };
 
 export function MessagePanel({ thread, folders, onClose, onMoveToFolder }: MessagePanelProps) {
   const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<InboxMessage[]>([]);
+
+  const emailId = thread?.id ?? null;
+  const { data: emailResp, isLoading } = useEmailQuery(emailId);
+  const replyMutation = useReplyMutation({
+    onSuccess: () => {
+      const newMsg: InboxMessage = {
+        id: `local-${Date.now()}`,
+        from: 'You',
+        content: message,
+        timestamp: new Date(),
+        isOutgoing: true,
+      };
+      setMessages(prev => [...prev, newMsg]);
+      setMessage('');
+    },
+  });
+
+  useEffect(() => {
+    if (emailResp) {
+      setMessages(mapEmailMessages(emailResp));
+    } else {
+      setMessages(thread?.messages || []);
+    }
+  }, [emailResp, thread]);
 
   if (!thread) {
     return (
@@ -113,7 +142,12 @@ export function MessagePanel({ thread, folders, onClose, onMoveToFolder }: Messa
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4 max-w-2xl mx-auto">
-          {thread.messages.map(msg => (
+          {isLoading && (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          )}
+          {!isLoading && messages.map(msg => (
             <div
               key={msg.id}
               className={cn(
@@ -121,16 +155,28 @@ export function MessagePanel({ thread, folders, onClose, onMoveToFolder }: Messa
                 msg.isOutgoing ? 'ml-auto items-end' : 'mr-auto items-start'
               )}
             >
-              <div
-                className={cn(
-                  'rounded-2xl px-4 py-2.5 text-sm',
-                  msg.isOutgoing
-                    ? 'bg-primary text-primary-foreground rounded-br-md'
-                    : 'bg-muted rounded-bl-md'
-                )}
-              >
-                {msg.content}
-              </div>
+              {msg.html ? (
+                <div
+                  className={cn(
+                    'rounded-2xl px-4 py-2.5 text-sm break-words',
+                    msg.isOutgoing
+                      ? 'bg-primary text-primary-foreground rounded-br-md'
+                      : 'bg-muted rounded-bl-md'
+                  )}
+                  dangerouslySetInnerHTML={{ __html: msg.html }}
+                />
+              ) : (
+                <div
+                  className={cn(
+                    'rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words',
+                    msg.isOutgoing
+                      ? 'bg-primary text-primary-foreground rounded-br-md'
+                      : 'bg-muted rounded-bl-md'
+                  )}
+                >
+                  {msg.content}
+                </div>
+              )}
               <span className="text-xs text-muted-foreground mt-1">
                 {format(msg.timestamp, 'h:mm a')}
               </span>
@@ -152,7 +198,16 @@ export function MessagePanel({ thread, folders, onClose, onMoveToFolder }: Messa
             className="resize-none min-h-[40px] max-h-24"
             rows={1}
           />
-          <Button size="icon" className="shrink-0">
+          <Button
+            size="icon"
+            className="shrink-0"
+            onClick={() => {
+              if (!thread) return;
+              if (!message.trim()) return;
+              replyMutation.mutate({ emailId: thread.id, content: message.trim() });
+            }}
+            disabled={replyMutation.isPending}
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
