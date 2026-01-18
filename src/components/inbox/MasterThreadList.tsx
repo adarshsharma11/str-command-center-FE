@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Star, Mail, MessageCircle, Facebook, Instagram, MessageSquare, MoreHorizontal } from 'lucide-react';
+import { Star, Mail, MessageCircle, Globe, Camera, MessageSquare, MoreHorizontal, Home } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
@@ -18,9 +18,10 @@ interface MasterThreadListProps {
 const platformIcons: Record<string, React.ElementType> = {
   gmail: Mail,
   whatsapp: MessageCircle,
-  facebook: Facebook,
-  instagram: Instagram,
+  facebook: Globe,
+  instagram: Camera,
   sms: MessageSquare,
+  airbnb: Home,
   other: MessageCircle,
 };
 
@@ -30,6 +31,7 @@ const platformColors: Record<string, string> = {
   facebook: 'text-blue-600',
   instagram: 'text-pink-500',
   sms: 'text-primary',
+  airbnb: 'text-rose-500',
   other: 'text-muted-foreground',
 };
 
@@ -60,7 +62,7 @@ export function MasterThreadList({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 p-2 space-y-2">
       {threads.map(thread => {
         const PlatformIcon = platformIcons[thread.platform];
         const folder = getFolder(thread.folderId);
@@ -70,8 +72,8 @@ export function MasterThreadList({
           <div
             key={thread.id}
             className={cn(
-              'flex items-center gap-3 px-4 py-3 border-b border-border cursor-pointer transition-colors group',
-              selectedThreadId === thread.id ? 'bg-primary/5' : 'hover:bg-muted/50',
+              'flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer transition-colors group border border-transparent hover:border-border',
+              selectedThreadId === thread.id ? 'bg-accent/50' : 'hover:bg-muted/50',
               !thread.isRead && 'bg-primary/5'
             )}
             onClick={() => onThreadClick(thread)}
@@ -103,7 +105,7 @@ export function MasterThreadList({
                   />
                 )}
               </div>
-              <p className={cn('text-sm truncate', !thread.isRead ? 'text-foreground' : 'text-muted-foreground')}>
+              <p className={cn('text-sm truncate', !thread.isRead ? 'text-foreground font-medium' : 'text-muted-foreground')}>
                 {thread.subject}
               </p>
               <p className="text-xs text-muted-foreground truncate">{thread.snippet}</p>

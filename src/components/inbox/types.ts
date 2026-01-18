@@ -13,7 +13,7 @@ export interface InboxThread {
   subject: string;
   snippet: string;
   folderId: string | null;
-  platform: 'gmail' | 'whatsapp' | 'facebook' | 'instagram' | 'sms' | 'other';
+  platform: 'gmail' | 'whatsapp' | 'facebook' | 'instagram' | 'sms' | 'airbnb' | 'other';
   isStarred: boolean;
   isRead: boolean;
   timestamp: Date;
@@ -24,6 +24,7 @@ export interface InboxMessage {
   id: string;
   from: string;
   content: string;
+  html?: string;
   timestamp: Date;
   isOutgoing: boolean;
 }

@@ -1,6 +1,7 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useState, useEffect, useRef } from 'react';
 import { getToken, setToken as persistToken, clearToken } from '@/lib/auth/token';
 import { useLoginMutation, useRegisterMutation, type LoginCredentials, type RegisterPayload, type AuthResponse } from '@/lib/api/auth';
+import { env } from '@/config/env';
 
 // ============================================================
 // DEV MODE AUTH BYPASS
@@ -79,6 +80,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
     },
   }), [token, user, loginMutation, registerMutation]);
+
+  useEffect(() => {
+    const handler = () => {
+      setToken(null);
+      setUser(null);
+    };
+    window.addEventListener('auth:unauthorized', handler);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handler);
+    };
+  }, []);
+
+  const inactivityTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    const resetTimer = () => {
+      if (inactivityTimerRef.current) {
+        window.clearTimeout(inactivityTimerRef.current);
+      }
+      inactivityTimerRef.current = window.setTimeout(() => {
+        clearToken();
+        setToken(null);
+        setUser(null);
+        try { window.dispatchEvent(new CustomEvent('auth:unauthorized')); } catch { void 0; }
+      }, env.inactivityLogoutMs);
+    };
+    const events = ['mousemove','keydown','click','scroll','touchstart','visibilitychange'];
+    events.forEach(evt => window.addEventListener(evt, resetTimer, { passive: true }));
+    resetTimer();
+    return () => {
+      events.forEach(evt => window.removeEventListener(evt, resetTimer));
+      if (inactivityTimerRef.current) {
+        window.clearTimeout(inactivityTimerRef.current);
+      }
+    };
+  }, []);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

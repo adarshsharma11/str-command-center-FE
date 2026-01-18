@@ -32,6 +32,11 @@ export const ENDPOINTS = {
   DASHBOARD: {
     METRICS: `${API_PREFIX}/dashboard`,
   },
+  EMAILS: {
+    INBOX: `${API_PREFIX}/emails/inbox`,
+    DETAIL: `${API_PREFIX}/emails/:id`,
+    REPLY: `${API_PREFIX}/emails/:id/reply`,
+  },
   INTEGRATIONS: {
     // User endpoints
     LIST: `${API_PREFIX}/users`,

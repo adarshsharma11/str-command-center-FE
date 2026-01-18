@@ -28,6 +28,9 @@ class ApiClient {
       if (response.status === 401 || response.status === 403) {
         clearToken();
         try {
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        } catch { void 0; }
+        try {
           window.location.replace('/auth');
         } catch { void 0; }
       }
