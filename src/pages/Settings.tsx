@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Pencil, Plus } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,34 @@ export default function Settings() {
   const [isUserIntegrationModalOpen, setIsUserIntegrationModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<IntegrationUser | null>(null);
   const [editingCategory, setEditingCategory] = useState<ServiceCategory | null>(null);
+  const [businessName, setBusinessName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [currency, setCurrency] = useState('USD');
+  const [timezone, setTimezone] = useState('america-new-york');
+  
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('business_profile');
+      if (raw) {
+        const p = JSON.parse(raw);
+        setBusinessName(p.businessName || '');
+        setContactEmail(p.contactEmail || '');
+        setPhone(p.phone || '');
+        setCurrency(p.currency || 'USD');
+        setTimezone(p.timezone || 'america-new-york');
+      }
+    } catch { /* noop */ }
+  }, []);
+  const handleSaveBusiness = () => {
+    try {
+      const payload = { businessName, contactEmail, phone, currency, timezone };
+      localStorage.setItem('business_profile', JSON.stringify(payload));
+      toast({ title: 'Saved', description: 'Business profile updated.' });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to save business profile.', variant: 'destructive' });
+    }
+  };
   
   const { data: serviceCategoriesData, isLoading: isLoadingServices } = useServiceCategoriesQuery();
   const { data: usersData, isLoading: isLoadingUsers } = useIntegrationUsersQuery();
@@ -100,20 +128,20 @@ export default function Settings() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="business-name">Business Name</Label>
-                      <Input id="business-name" placeholder="Luxury Retreats International" />
+                      <Input id="business-name" placeholder="Luxury Retreats International" value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="contact-email">Contact Email</Label>
-                      <Input id="contact-email" type="email" placeholder="contact@luxuryretreats.com" />
+                      <Input id="contact-email" type="email" placeholder="contact@luxuryretreats.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone Number</Label>
-                      <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" />
+                      <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" value={phone} onChange={(e) => setPhone(e.target.value)} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="currency">Currency</Label>
-                        <Select defaultValue="USD">
+                        <Select value={currency} onValueChange={setCurrency}>
                           <SelectTrigger id="currency">
                             <SelectValue />
                           </SelectTrigger>
@@ -126,7 +154,7 @@ export default function Settings() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="timezone">Timezone</Label>
-                        <Select defaultValue="america-new-york">
+                        <Select value={timezone} onValueChange={setTimezone}>
                           <SelectTrigger id="timezone">
                             <SelectValue />
                           </SelectTrigger>
@@ -138,7 +166,7 @@ export default function Settings() {
                         </Select>
                       </div>
                     </div>
-                    <Button>Save Business Profile</Button>
+                    <Button onClick={handleSaveBusiness}>Save Business Profile</Button>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -154,7 +182,20 @@ export default function Settings() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {isLoadingServices ? (
-                       <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
+                      <div className="space-y-4">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-2">
+                                <div className="h-4 w-40 bg-muted rounded" />
+                                <div className="h-3 w-64 bg-muted rounded" />
+                              </div>
+                              <div className="h-6 w-12 bg-muted rounded" />
+                            </div>
+                            <Separator />
+                          </div>
+                        ))}
+                      </div>
                     ) : (
                       <>
                         {serviceCategoriesData?.data?.map((service) => (
@@ -233,7 +274,21 @@ export default function Settings() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {isLoadingUsers ? (
-                      <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
+                      <div className="space-y-4">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i}>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="space-y-2">
+                                <div className="h-4 w-32 bg-muted rounded" />
+                                <div className="h-3 w-56 bg-muted rounded" />
+                                <div className="h-3 w-24 bg-muted rounded" />
+                              </div>
+                              <div className="h-8 w-20 bg-muted rounded" />
+                            </div>
+                            <Separator />
+                          </div>
+                        ))}
+                      </div>
                     ) : (
                       <>
                         {usersData?.data?.map((user, index) => (

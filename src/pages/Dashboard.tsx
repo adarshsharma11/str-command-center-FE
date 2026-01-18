@@ -15,8 +15,40 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="p-6 space-y-6">
+          <div className="space-y-2">
+            <div className="h-7 w-48 bg-muted rounded" />
+            <div className="h-4 w-64 bg-muted rounded" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="pt-6">
+                  <div className="space-y-2">
+                    <div className="h-4 w-24 bg-muted rounded" />
+                    <div className="h-6 w-32 bg-muted rounded" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[0,1].map((i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <div className="h-5 w-56 bg-muted rounded" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {Array.from({ length: 4 }).map((_, j) => (
+                    <div key={j} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div className="h-4 w-40 bg-muted rounded" />
+                      <div className="h-4 w-20 bg-muted rounded" />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </Layout>
     );

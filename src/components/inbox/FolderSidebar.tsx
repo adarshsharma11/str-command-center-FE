@@ -112,8 +112,8 @@ export function FolderSidebar({
   };
 
   return (
-    <div className="w-56 border-r border-border bg-muted/20 flex flex-col h-full">
-      <div className="p-3 border-b border-border flex items-center justify-between">
+    <div className="w-64 border-r border-border bg-muted/20 flex flex-col h-full overflow-y-auto">
+      <div className="p-3 border-b border-border flex items-center justify-between sticky top-0 bg-muted/20 z-10">
         <span className="text-sm font-semibold text-foreground">Folders</span>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
@@ -149,7 +149,7 @@ export function FolderSidebar({
         </Dialog>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+      <div className="flex-1 p-2 space-y-0.5">
         <div
           className={cn(
             'flex items-center gap-2 py-2 px-2 rounded-lg cursor-pointer transition-colors',
@@ -159,7 +159,7 @@ export function FolderSidebar({
         >
           <Inbox className="h-4 w-4" />
           <span className="text-sm font-medium flex-1">All Messages</span>
-          <span className="text-xs text-muted-foreground">{totalCount}</span>
+          <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{totalCount}</span>
         </div>
         {getFolderChildren(null).map(folder => renderFolder(folder))}
       </div>

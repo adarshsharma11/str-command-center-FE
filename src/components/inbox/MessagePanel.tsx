@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { Send, Paperclip, X, Mail, MessageCircle, Facebook, Instagram, MessageSquare, Home } from 'lucide-react';
+import { Send, Paperclip, X, Mail, MessageCircle, Globe, Camera, MessageSquare, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -21,8 +21,8 @@ interface MessagePanelProps {
 const platformIcons: Record<string, React.ElementType> = {
   gmail: Mail,
   whatsapp: MessageCircle,
-  facebook: Facebook,
-  instagram: Instagram,
+  facebook: Globe,
+  instagram: Camera,
   sms: MessageSquare,
   airbnb: Home,
   other: MessageCircle,
@@ -141,7 +141,7 @@ export function MessagePanel({ thread, folders, onClose, onMoveToFolder }: Messa
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4 max-w-2xl mx-auto">
+        <div className="space-y-4 max-w-3xl mx-auto">
           {isLoading && (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -187,7 +187,7 @@ export function MessagePanel({ thread, folders, onClose, onMoveToFolder }: Messa
 
       {/* Composer */}
       <div className="p-4 border-t border-border">
-        <div className="flex gap-2 max-w-2xl mx-auto">
+        <div className="flex gap-2 max-w-3xl mx-auto">
           <Button variant="ghost" size="icon" className="shrink-0">
             <Paperclip className="h-4 w-4" />
           </Button>
