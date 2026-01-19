@@ -10,6 +10,7 @@ import { useActivityRulesQuery, useUpdateActivityRuleStatusMutation, useAutomati
 import { ActivityRuleDialog } from '@/components/automation/ActivityRuleDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { AutomationPageSkeleton } from '@/components/skeletons/AutomationSkeleton';
 
 export default function Automation() {
   const { data: rulesData, isLoading, error } = useActivityRulesQuery();
@@ -56,7 +57,7 @@ export default function Automation() {
     );
   };
 
-  if (isLoading) return <Layout><div>Loading rules...</div></Layout>;
+  if (isLoading) return <Layout><AutomationPageSkeleton /></Layout>;
   if (error) return <Layout><div>Error loading rules: {error.message}</div></Layout>;
 
   const rules = rulesData?.data || [];
