@@ -16,6 +16,7 @@ interface MessagePanelProps {
   folders: InboxFolder[];
   onClose: () => void;
   onMoveToFolder: (threadId: string, folderId: string | null) => void;
+  mailboxFolder?: 'INBOX' | 'SENT';
 }
 
 const platformIcons: Record<string, React.ElementType> = {
@@ -25,6 +26,8 @@ const platformIcons: Record<string, React.ElementType> = {
   instagram: Camera,
   sms: MessageSquare,
   airbnb: Home,
+  booking: Home,
+  vrbo: Home,
   other: MessageCircle,
 };
 
@@ -35,15 +38,17 @@ const platformLabels: Record<string, string> = {
   instagram: 'Instagram',
   sms: 'SMS',
   airbnb: 'Airbnb',
+  booking: 'Booking.com',
+  vrbo: 'Vrbo',
   other: 'Message',
 };
 
-export function MessagePanel({ thread, folders, onClose, onMoveToFolder }: MessagePanelProps) {
+export function MessagePanel({ thread, folders, onClose, onMoveToFolder, mailboxFolder = 'INBOX' }: MessagePanelProps) {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<InboxMessage[]>([]);
 
   const emailId = thread?.id ?? null;
-  const { data: emailResp, isLoading } = useEmailQuery(emailId);
+  const { data: emailResp, isLoading } = useEmailQuery(emailId, mailboxFolder);
   const replyMutation = useReplyMutation({
     onSuccess: () => {
       const newMsg: InboxMessage = {

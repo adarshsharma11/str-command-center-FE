@@ -11,6 +11,7 @@ type EmailItem = {
   body_text?: string;
   body_html?: string;
   platform?: string;
+  folder?: string;
 };
 
 type InboxResponse = {
@@ -54,7 +55,7 @@ function stripHtml(html?: string): string {
   return div.textContent || div.innerText || '';
 }
 
-function mapPlatform(p?: string): InboxThread['platform'] {
+function mapPlatform(p?: string, subject?: string, sender?: string): InboxThread['platform'] {
   const x = (p || '').toLowerCase();
   if (x === 'gmail' || x === 'email') return 'gmail';
   if (x === 'whatsapp') return 'whatsapp';
@@ -62,23 +63,55 @@ function mapPlatform(p?: string): InboxThread['platform'] {
   if (x === 'instagram') return 'instagram';
   if (x === 'sms') return 'sms';
   if (x === 'airbnb') return 'airbnb';
+  if (x === 'booking' || x === 'booking.com') return 'booking';
+  
+  // Infer from subject or sender if platform is not explicit
+  const text = ((subject || '') + ' ' + (sender || '')).toLowerCase();
+  if (text.includes('airbnb')) return 'airbnb';
+  if (text.includes('booking.com') || text.includes('booking confirmation')) return 'booking';
+  if (text.includes('vrbo')) return 'vrbo';
+  
   return 'other';
+}
+
+function parseSender(sender?: string): { name: string; email?: string } {
+  if (!sender) return { name: '—' };
+  const match = sender.match(/^(.*?)\s*<(.+)>$/);
+  if (match) {
+    return { name: match[1].trim().replace(/^"|"$/g, ''), email: match[2].trim() };
+  }
+  return { name: sender.trim() };
 }
 
 function toThread(item: EmailItem): InboxThread {
   const snippet = item.body_text || stripHtml(item.body_html) || '';
+  const { name: senderName } = parseSender(item.sender);
+  
+  // Create initial message from email body
+  const initialMessage: InboxMessage = {
+    id: String(item.email_id) + '-main',
+    from: senderName,
+    content: item.body_text || stripHtml(item.body_html) || '',
+    html: item.body_html || undefined,
+    timestamp: item.date ? new Date(item.date) : new Date(),
+    isOutgoing: false, // Assuming incoming emails are not outgoing by default
+  };
+
+  const mailboxFolder = (item.folder || '').toUpperCase() === 'SENT' ? 'SENT' : 'INBOX';
+
   return {
     id: String(item.email_id),
-    senderName: item.sender || '—',
+    senderName,
     senderAvatar: undefined,
     subject: item.subject || '—',
     snippet: snippet.slice(0, 180),
     folderId: null,
-    platform: mapPlatform(item.platform),
+    platform: mapPlatform(item.platform, item.subject, item.sender),
     isStarred: false,
     isRead: false,
     timestamp: item.date ? new Date(item.date) : new Date(),
-    messages: [],
+    mailboxFolder,
+    messages: [initialMessage],
   };
 }
 
@@ -101,8 +134,12 @@ async function fetchInbox(): Promise<InboxResponse> {
   return apiClient.get<InboxResponse>(ENDPOINTS.EMAILS.INBOX);
 }
 
-async function fetchEmail(emailId: string): Promise<EmailDetailResponse> {
-  const endpoint = ENDPOINTS.EMAILS.DETAIL.replace(':id', emailId);
+async function fetchEmail(emailId: string, folder?: 'INBOX' | 'SENT'): Promise<EmailDetailResponse> {
+  let endpoint = ENDPOINTS.EMAILS.DETAIL.replace(':id', emailId);
+  if (folder) {
+    const qs = new URLSearchParams({ folder }).toString();
+    endpoint = `${endpoint}?${qs}`;
+  }
   return apiClient.get<EmailDetailResponse>(endpoint);
 }
 
@@ -114,21 +151,28 @@ async function replyToEmail(emailId: string, payload: ReplyPayload): Promise<Rep
 }
 
 export type InboxFilters = {
-  folder?: 'INBOX' | 'SENT';
+  folder?: 'INBOX' | 'SENT' | 'BOTH';
   q?: string;
   platform?: 'airbnb' | 'vrbo' | 'booking' | 'plumguide';
   since_days?: number;
   limit?: number;
+  only_booking?: boolean;
 };
 
 async function fetchInboxWithFilters(filters?: InboxFilters): Promise<InboxResponse> {
-  const base = ENDPOINTS.EMAILS.INBOX;
+  const isSentFolder = filters?.folder === 'SENT';
+  const base = isSentFolder ? ENDPOINTS.EMAILS.SENT : ENDPOINTS.EMAILS.INBOX;
   const params = new URLSearchParams();
-  if (filters?.folder) params.set('folder', filters.folder);
+  
+  // Only add 'folder' param if NOT using the dedicated SENT endpoint
+  if (filters?.folder && !isSentFolder) params.set('folder', filters.folder);
+  
   if (filters?.q) params.set('q', filters.q);
   if (filters?.platform) params.set('platform', filters.platform);
   if (typeof filters?.since_days === 'number') params.set('since_days', String(filters.since_days));
   if (typeof filters?.limit === 'number') params.set('limit', String(filters.limit));
+  // if (typeof filters?.only_booking === 'boolean') params.set('only_booking', String(filters.only_booking));
+  
   const endpoint = params.toString() ? `${base}?${params.toString()}` : base;
   return apiClient.get<InboxResponse>(endpoint);
 }
@@ -142,10 +186,14 @@ export function useInboxQuery(filters?: InboxFilters, options?: QueryOptions<Inb
   });
 }
 
-export function useEmailQuery(emailId: string | null, options?: QueryOptions<EmailDetailResponse>) {
+export function useEmailQuery(
+  emailId: string | null,
+  folder?: 'INBOX' | 'SENT' | 'BOTH',
+  options?: QueryOptions<EmailDetailResponse>
+) {
   return useQuery<EmailDetailResponse>({
-    queryKey: ['emails', 'detail', emailId],
-    queryFn: () => fetchEmail(String(emailId)),
+    queryKey: ['emails', 'detail', emailId, folder],
+    queryFn: () => fetchEmail(String(emailId), folder === 'SENT' ? 'SENT' : 'INBOX'),
     enabled: Boolean(emailId),
     staleTime: 30_000,
     ...options,

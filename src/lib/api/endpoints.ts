@@ -34,6 +34,7 @@ export const ENDPOINTS = {
   },
   EMAILS: {
     INBOX: `${API_PREFIX}/emails/inbox`,
+    SENT: `${API_PREFIX}/emails/sent`,
     DETAIL: `${API_PREFIX}/emails/:id`,
     REPLY: `${API_PREFIX}/emails/:id/reply`,
   },

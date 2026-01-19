@@ -17,12 +17,13 @@ export default function Inbox() {
   const [threads, setThreads] = useState<InboxThread[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedThread, setSelectedThread] = useState<InboxThread | null>(null);
-  const [filters, setFilters] = useState<InboxFilters>({ folder: 'INBOX', limit: 50 });
+  const [filters, setFilters] = useState<InboxFilters>({ folder: 'BOTH', limit: 50, only_booking: false });
   const { data: inboxResp, isLoading, error, refetch } = useInboxQuery(filters);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (inboxResp) {
+      console.log('Inbox API Response:', inboxResp);
       setThreads(mapInboxThreads(inboxResp));
     }
   }, [inboxResp]);
@@ -90,8 +91,8 @@ export default function Inbox() {
         <div className="w-full px-4 py-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 flex flex-wrap items-center gap-2 sm:gap-3 sticky top-0 z-20">
           <div className="w-36">
             <Select
-              value={filters.folder || 'INBOX'}
-              onValueChange={(v) => setFilters((prev) => ({ ...prev, folder: v as 'INBOX' | 'SENT' }))}
+              value={filters.folder || 'BOTH'}
+              onValueChange={(v) => setFilters((prev) => ({ ...prev, folder: v as 'INBOX' | 'SENT' | 'BOTH' }))}
             >
               <SelectTrigger className="h-8 px-2 text-sm">
                 <SelectValue placeholder="Folder" />
@@ -99,6 +100,7 @@ export default function Inbox() {
               <SelectContent>
                 <SelectItem value="INBOX">INBOX</SelectItem>
                 <SelectItem value="SENT">SENT</SelectItem>
+                <SelectItem value="BOTH">All</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -200,6 +202,7 @@ export default function Inbox() {
                 folders={folders}
                 onClose={() => setSelectedThread(null)}
                 onMoveToFolder={handleMoveToFolder}
+                mailboxFolder={selectedThread?.mailboxFolder ?? (filters.folder === 'SENT' ? 'SENT' : 'INBOX')}
               />
             </div>
           </>
