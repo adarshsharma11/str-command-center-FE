@@ -22,6 +22,8 @@ const platformIcons: Record<string, React.ElementType> = {
   instagram: Camera,
   sms: MessageSquare,
   airbnb: Home,
+  booking: Home,
+  vrbo: Home,
   other: MessageCircle,
 };
 
@@ -32,6 +34,8 @@ const platformColors: Record<string, string> = {
   instagram: 'text-pink-500',
   sms: 'text-primary',
   airbnb: 'text-rose-500',
+  booking: 'text-blue-700',
+  vrbo: 'text-sky-600',
   other: 'text-muted-foreground',
 };
 

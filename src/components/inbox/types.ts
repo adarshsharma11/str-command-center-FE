@@ -13,10 +13,11 @@ export interface InboxThread {
   subject: string;
   snippet: string;
   folderId: string | null;
-  platform: 'gmail' | 'whatsapp' | 'facebook' | 'instagram' | 'sms' | 'airbnb' | 'other';
+  platform: 'gmail' | 'whatsapp' | 'facebook' | 'instagram' | 'sms' | 'airbnb' | 'booking' | 'vrbo' | 'other';
   isStarred: boolean;
   isRead: boolean;
   timestamp: Date;
+  mailboxFolder?: 'INBOX' | 'SENT';
   messages: InboxMessage[];
 }
 
