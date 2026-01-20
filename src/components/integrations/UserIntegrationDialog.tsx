@@ -37,6 +37,8 @@ interface UserIntegrationDialogProps {
   user?: IntegrationUser | null;
   onTestConnection?: (email: string) => void;
   onConnect?: (email: string) => void;
+  isTestingConnection?: boolean;
+  isConnecting?: boolean;
 }
 
 export function UserIntegrationDialog({
@@ -47,6 +49,8 @@ export function UserIntegrationDialog({
   user,
   onTestConnection,
   onConnect,
+  isTestingConnection = false,
+  isConnecting = false,
 }: UserIntegrationDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
   
@@ -111,7 +115,7 @@ export function UserIntegrationDialog({
             </div>
             
             <div className="text-sm text-muted-foreground pt-2">
-              Status: <span className={user.status === 'active' ? 'text-green-600' : 'text-muted-foreground'}>{user.status}</span>
+              Status: <span className={(user.status === 'active' || user.status === 'connected') ? 'text-green-600' : 'text-muted-foreground'}>{user.status}</span>
             </div>
 
             <div className="flex flex-col gap-2 pt-4">
@@ -119,25 +123,31 @@ export function UserIntegrationDialog({
                 <Button 
                   type="button" 
                   variant="outline" 
-                  className="flex-1"
+                  className={(user.status === 'connected' || user.status === 'active') ? 'w-full' : 'flex-1'}
                   onClick={() => setIsEditing(true)}
                 >
                   Edit
                 </Button>
-                <Button 
-                  type="button" 
-                  className="flex-1"
-                  onClick={() => onConnect?.(user.email)}
-                >
-                  Connect
-                </Button>
+                {(user.status !== 'connected' && user.status !== 'active') && (
+                  <Button 
+                    type="button" 
+                    className="flex-1"
+                    onClick={() => onConnect?.(user.email)}
+                    disabled={isConnecting}
+                  >
+                    {isConnecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Connect
+                  </Button>
+                )}
               </div>
               <Button 
                 type="button" 
                 variant="secondary" 
                 className="w-full"
                 onClick={() => onTestConnection?.(user.email)}
+                disabled={isTestingConnection}
               >
+                {isTestingConnection && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Test Connection
               </Button>
             </div>

@@ -37,6 +37,7 @@ export default function Settings() {
   const [phone, setPhone] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [timezone, setTimezone] = useState('america-new-york');
+  const [connectionAction, setConnectionAction] = useState<'test' | 'connect' | null>(null);
   
   useEffect(() => {
     try {
@@ -88,9 +89,11 @@ export default function Settings() {
   const connectUserMutation = useConnectIntegrationUserMutation({
     onSuccess: (data) => {
       toast({ title: 'Success', description: data.message || 'Connection successful.' });
+      setConnectionAction(null);
     },
     onError: (err) => {
       toast({ title: 'Error', description: err.message || 'Connection failed.', variant: 'destructive' });
+      setConnectionAction(null);
     }
   });
 
@@ -410,8 +413,16 @@ export default function Settings() {
           onSubmit={handleAddUserIntegration}
           isSubmitting={createUserMutation.isPending}
           user={selectedUser}
-          onTestConnection={(email) => connectUserMutation.mutate(email)}
-          onConnect={(email) => connectUserMutation.mutate(email)}
+          onTestConnection={(email) => {
+            setConnectionAction('test');
+            connectUserMutation.mutate(email);
+          }}
+          onConnect={(email) => {
+            setConnectionAction('connect');
+            connectUserMutation.mutate(email);
+          }}
+          isTestingConnection={connectionAction === 'test' && connectUserMutation.isPending}
+          isConnecting={connectionAction === 'connect' && connectUserMutation.isPending}
         />
 
       </div>
