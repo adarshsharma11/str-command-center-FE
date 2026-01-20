@@ -43,7 +43,7 @@ export function FlippableBookingCard({ booking, color, onDetailsClick }: Flippab
 
   return (
     <div 
-      className="relative h-48 cursor-pointer perspective-1000"
+      className="relative h-52 cursor-pointer perspective-1000"
       onClick={() => setIsFlipped(!isFlipped)}
     >
       <div
