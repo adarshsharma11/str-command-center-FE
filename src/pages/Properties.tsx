@@ -285,8 +285,8 @@ export default function Properties() {
                                 Trust: {listing.trustScore}%
                               </span>
                             </div>
-                            <Badge className={`text-xs ${syncStatusColors[listing.syncStatus]}`}>
-                              {listing.syncStatus}
+                            <Badge className={`text-xs ${syncStatusColors['Synced']}`}>
+                              {'Synced'}
                             </Badge>
                           </div>
                         ))}
