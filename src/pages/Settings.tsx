@@ -130,13 +130,13 @@ export default function Settings() {
           <CardContent className="pt-6">
             <Tabs defaultValue="integrations" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="business">Business</TabsTrigger>
+                {/* <TabsTrigger value="business">Business</TabsTrigger> */}
                 <TabsTrigger value="services">Services</TabsTrigger>
                 <TabsTrigger value="integrations">Integrations</TabsTrigger>
               </TabsList>
 
               {/* Business Tab */}
-              <TabsContent value="business" className="space-y-4 mt-6">
+              {/* <TabsContent value="business" className="space-y-4 mt-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Business Profile</CardTitle>
@@ -188,7 +188,7 @@ export default function Settings() {
                     <Button onClick={handleSaveBusiness}>Save Business Profile</Button>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </TabsContent> */}
 
               {/* Services Tab */}
               <TabsContent value="services" className="space-y-4 mt-6">
@@ -346,7 +346,7 @@ export default function Settings() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                {/* <Card>
                   <CardHeader>
                     <CardTitle>Payment Processing</CardTitle>
                     <CardDescription>
@@ -364,7 +364,7 @@ export default function Settings() {
                     </div>
                     <Button variant="outline">Test Connection</Button>
                   </CardContent>
-                </Card>
+                </Card> */}
               </TabsContent>
             </Tabs>
           </CardContent>
