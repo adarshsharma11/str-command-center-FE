@@ -20,6 +20,7 @@ import {
   useIntegrationUsersQuery,
   useCreateIntegrationUserMutation,
   useConnectIntegrationUserMutation,
+  useUpdatePlatformCredentialsMutation,
   type IntegrationUser
 } from '@/lib/api/integrations';
 import { UserIntegrationDialog } from '@/components/integrations/UserIntegrationDialog';
@@ -86,6 +87,18 @@ export default function Settings() {
     }
   });
 
+  const updatePlatformMutation = useUpdatePlatformCredentialsMutation({
+    onSuccess: (data) => {
+      toast({ title: 'Success', description: data.message || 'Platform credentials updated.' });
+      queryClient.invalidateQueries({ queryKey: ['integration-users'] });
+      setIsUserIntegrationModalOpen(false);
+      setSelectedUser(null);
+    },
+    onError: (err) => {
+      toast({ title: 'Error', description: err.message || 'Failed to update platform credentials.', variant: 'destructive' });
+    }
+  });
+
   const connectUserMutation = useConnectIntegrationUserMutation({
     onSuccess: (data) => {
       toast({ title: 'Success', description: data.message || 'Connection successful.' });
@@ -97,8 +110,12 @@ export default function Settings() {
     }
   });
 
-  const handleAddUserIntegration = async (values: { email: string; password: string }) => {
-    await createUserMutation.mutateAsync(values);
+  const handleSubmitUserIntegration = async (values: { email: string; password: string }) => {
+    if (selectedUser?.platform) {
+      await updatePlatformMutation.mutateAsync({ platform: selectedUser.platform, credentials: values });
+    } else {
+      await createUserMutation.mutateAsync(values);
+    }
   };
 
   return (
@@ -356,8 +373,8 @@ export default function Settings() {
         <UserIntegrationDialog 
           open={isUserIntegrationModalOpen}
           onOpenChange={setIsUserIntegrationModalOpen}
-          onSubmit={handleAddUserIntegration}
-          isSubmitting={createUserMutation.isPending}
+          onSubmit={handleSubmitUserIntegration}
+          isSubmitting={createUserMutation.isPending || updatePlatformMutation.isPending}
           user={selectedUser}
           onTestConnection={(email) => {
             setConnectionAction('test');

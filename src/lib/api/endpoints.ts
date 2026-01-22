@@ -42,6 +42,8 @@ export const ENDPOINTS = {
     // User endpoints
     LIST: `${API_PREFIX}/users`,
     CREATE: `${API_PREFIX}/users`,
+    UPDATE: `${API_PREFIX}/users/:email`,
+    PLATFORM_UPDATE: `${API_PREFIX}/users/platform/:platform`,
     USER_CONNECT: `${API_PREFIX}/users/:email/connect`,
     USER_TEST: `${API_PREFIX}/users/:email/test`,
     

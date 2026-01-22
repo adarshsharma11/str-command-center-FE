@@ -17,6 +17,12 @@ export type CreateIntegrationUserPayload = {
   password: string;
 };
 
+export type UpdateIntegrationUserPayload = {
+  currentEmail: string;
+  email: string;
+  password: string;
+};
+
 // Alias for platform credentials
 export type PlatformCredentials = CreateIntegrationUserPayload;
 
@@ -47,6 +53,13 @@ async function createIntegrationUser(payload: CreateIntegrationUserPayload): Pro
   return apiClient.post<ApiResponse<IntegrationUser>>(ENDPOINTS.INTEGRATIONS.CREATE, payload);
 }
 
+async function updateIntegrationUser(payload: UpdateIntegrationUserPayload): Promise<ApiResponse<IntegrationUser>> {
+  const encodedEmail = encodeURIComponent(payload.currentEmail);
+  const endpoint = ENDPOINTS.INTEGRATIONS.UPDATE.replace(':email', encodedEmail);
+  // Use PATCH to update credentials; body carries new email/password
+  return apiClient.patch<ApiResponse<IntegrationUser>>(endpoint, { email: payload.email, password: payload.password });
+}
+
 async function connectIntegrationUser(email: string): Promise<ApiResponse<ConnectionData>> {
   const encodedEmail = encodeURIComponent(email);
   const endpoint = ENDPOINTS.INTEGRATIONS.USER_CONNECT.replace(':email', encodedEmail);
@@ -70,6 +83,10 @@ async function testPlatformConnection(payload: { platform: PlatformType; credent
   return apiClient.post<ApiResponse<ConnectionData>>(endpoint, payload.credentials);
 }
 
+async function updatePlatformCredentials(payload: { platform: PlatformType; credentials: PlatformCredentials }): Promise<ApiResponse<ConnectionData>> {
+  const endpoint = ENDPOINTS.INTEGRATIONS.PLATFORM_UPDATE.replace(':platform', payload.platform);
+  return apiClient.put<ApiResponse<ConnectionData>>(endpoint, payload.credentials);
+}
 // --- React Query Hooks ---
 
 export const useIntegrationUsersQuery = (options?: UseQueryOptions<IntegrationListResponse, Error>) => {
@@ -83,6 +100,13 @@ export const useIntegrationUsersQuery = (options?: UseQueryOptions<IntegrationLi
 export const useCreateIntegrationUserMutation = (options?: UseMutationOptions<ApiResponse<IntegrationUser>, Error, CreateIntegrationUserPayload>) => {
   return useMutation({
     mutationFn: createIntegrationUser,
+    ...options,
+  });
+};
+
+export const useUpdateIntegrationUserMutation = (options?: UseMutationOptions<ApiResponse<IntegrationUser>, Error, UpdateIntegrationUserPayload>) => {
+  return useMutation({
+    mutationFn: updateIntegrationUser,
     ...options,
   });
 };
@@ -113,6 +137,13 @@ export const useDisconnectIntegrationMutation = (options?: UseMutationOptions<Ap
 export const useTestConnectionMutation = (options?: UseMutationOptions<ApiResponse<ConnectionData>, Error, { platform: PlatformType; credentials: PlatformCredentials }>) => {
   return useMutation({
     mutationFn: testPlatformConnection,
+    ...options,
+  });
+};
+
+export const useUpdatePlatformCredentialsMutation = (options?: UseMutationOptions<ApiResponse<ConnectionData>, Error, { platform: PlatformType; credentials: PlatformCredentials }>) => {
+  return useMutation({
+    mutationFn: updatePlatformCredentials,
     ...options,
   });
 };
