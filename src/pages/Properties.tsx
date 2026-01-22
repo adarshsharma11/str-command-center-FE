@@ -62,7 +62,6 @@ export default function Properties() {
   const apiItems = data?.data?.data ?? [];
   const properties: PropertyView[] = apiItems.map(propertyMappers.toViewProperty);
   const listings: PropertyListingView[] = apiItems.flatMap(propertyMappers.toPropertyListings);
-  console.log(properties, 'dddd')
 
   const getPropertyListings = (propertyId: string) => {
     return listings.filter(l => l.propertyId === propertyId);
