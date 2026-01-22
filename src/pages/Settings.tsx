@@ -116,7 +116,6 @@ export default function Settings() {
                 <TabsTrigger value="business">Business</TabsTrigger>
                 <TabsTrigger value="services">Services</TabsTrigger>
                 <TabsTrigger value="integrations">Integrations</TabsTrigger>
-                <TabsTrigger value="notifications">Notifications</TabsTrigger>
               </TabsList>
 
               {/* Business Tab */}
@@ -347,59 +346,6 @@ export default function Settings() {
                       />
                     </div>
                     <Button variant="outline">Test Connection</Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Notifications Tab */}
-              <TabsContent value="notifications" className="space-y-4 mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Notification Preferences</CardTitle>
-                    <CardDescription>
-                      Manage how you receive updates and alerts
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {[
-                      { title: 'New Bookings', desc: 'Receive notifications for new reservations' },
-                      { title: 'Service Requests', desc: 'Get alerted when guests request luxury services' },
-                      { title: 'Payment Updates', desc: 'Notifications for payment status changes' },
-                      { title: 'Guest Messages', desc: 'Receive guest communication alerts' },
-                      { title: 'Maintenance Issues', desc: 'Critical property maintenance alerts' },
-                      { title: 'Daily Summary', desc: 'Daily digest of all activities' },
-                    ].map((notification) => (
-                      <div key={notification.title}>
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground">{notification.title}</p>
-                            <p className="text-sm text-muted-foreground">{notification.desc}</p>
-                          </div>
-                          <Switch defaultChecked />
-                        </div>
-                        <Separator />
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Contact Methods</CardTitle>
-                    <CardDescription>
-                      Configure how notifications are delivered
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input id="email" type="email" placeholder="alerts@luxuryretreats.com" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sms">SMS Number</Label>
-                      <Input id="sms" type="tel" placeholder="+1 (555) 123-4567" />
-                    </div>
-                    <Button>Update Contact Methods</Button>
                   </CardContent>
                 </Card>
               </TabsContent>
