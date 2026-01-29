@@ -2,6 +2,7 @@ import { useQuery, QueryOptions } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { CalendarBooking, VendorTask } from '@/components/calendar/types';
+import { parseAsLocalTime } from '@/lib/utils';
 
 type BookingApiItem = {
   reservation_id: string;
@@ -13,7 +14,7 @@ type BookingApiItem = {
   check_out?: string;
   check_in_date?: string;
   check_out_date?: string;
-  nights?: number;
+  night?: number;
   reservation_status?: string;
   payment_status?: string;
   total_amount?: number;
@@ -62,18 +63,20 @@ function normalizePlatform(p?: string): string {
 }
 
 export function toViewBooking(b: BookingApiItem): ViewBooking {
-  const checkInStr = b.check_in ?? b.created_at;
-  const checkOutStr = b.check_out ?? b.check_in ?? b.created_at;
+  // Prioritize check_in_date/check_out_date, then check_in/check_out, then created_at
+  const checkInStr = b.check_in_date || b.check_in || b.created_at;
+  const checkOutStr = b.check_out_date || b.check_out || b.check_in || b.created_at;
+  
   return {
     id: b.reservation_id,
     guestName: b.guest_name ?? '—',
     propertyName: b.property_name ?? '—',
-    checkIn: new Date(checkInStr),
-    checkOut: new Date(checkOutStr),
-    nights: typeof b.nights === 'number' ? b.nights : 0,
+    checkIn: parseAsLocalTime(checkInStr),
+    checkOut: parseAsLocalTime(checkOutStr),
+    nights: typeof b.night === 'number' ? b.night : 0,
     platform: normalizePlatform(b.platform),
     reservationStatus: b.reservation_status ?? 'Confirmed',
-    paymentStatus: b.payment_status ?? 'Paid',
+    paymentStatus: (!b.total_amount) ? 'Pending' : (b.payment_status ?? 'Paid'),
     totalAmount: typeof b.total_amount === 'number' ? b.total_amount : 0,
   };
 }
@@ -83,16 +86,26 @@ export function toCalendarBooking(apiBooking: BookingApiItem): CalendarBooking {
   const platform = apiBooking.platform?.toLowerCase() || 'unknown';
   const normalizedPlatform = platform === 'booking.com' ? 'booking' : platform;
   
+  // Debug log to check incoming date values
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Booking dates debug:', {
+      id: apiBooking.reservation_id,
+      check_in_date: apiBooking.check_in_date,
+      check_in: apiBooking.check_in,
+      created_at: apiBooking.created_at
+    });
+  }
+
   return {
     id: apiBooking.reservation_id,
     propertyId: apiBooking.property_id || 'unknown',
     propertyName: apiBooking.property_name || 'Unknown Property',
     guestName: apiBooking.guest_name || 'Unknown Guest',
-    checkIn: new Date(apiBooking.check_in_date || apiBooking.check_in || apiBooking.created_at),
-    checkOut: new Date(apiBooking.check_out_date || apiBooking.check_out || apiBooking.created_at),
+    checkIn: parseAsLocalTime(apiBooking.check_in_date || apiBooking.check_in || apiBooking.created_at),
+    checkOut: parseAsLocalTime(apiBooking.check_out_date || apiBooking.check_out || apiBooking.created_at),
     channel: normalizedPlatform as 'airbnb' | 'vrbo' | 'direct' | 'booking',
     status: apiBooking.reservation_id === 'confirmed' ? 'confirmed' : 'pending',
-    paymentStatus: 'paid', // Default as API doesn't provide this
+    paymentStatus: (apiBooking.total_amount === 0 || !apiBooking.total_amount) ? 'pending' : 'paid',
     guestCount: apiBooking.number_of_guests || 1,
     guestEmail: apiBooking.guest_email || undefined,
     guestPhone: apiBooking.guest_phone || undefined,
@@ -118,7 +131,7 @@ export function toVendorTask(apiTask: {
     propertyName: propertyName || 'Unknown Property',
     vendorName: apiTask.crews?.name || 'Unknown Vendor',
     type: 'cleaning',
-    scheduledTime: new Date(apiTask.scheduled_date || apiTask.scheduledTime),
+    scheduledTime: parseAsLocalTime(apiTask.scheduled_date || apiTask.scheduledTime),
     duration: 60,
     status: 'scheduled',
     notes: '',

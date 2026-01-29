@@ -36,6 +36,8 @@ export function FlippableBookingCard({ booking, color, onDetailsClick }: Flippab
         return <Badge className="bg-amber-500/10 text-amber-600">Partial</Badge>;
       case 'unpaid':
         return <Badge className="bg-red-500/10 text-red-600">Unpaid</Badge>;
+      case 'pending':
+        return <Badge className="bg-orange-500/10 text-orange-600">Pending</Badge>;
       default:
         return null;
     }

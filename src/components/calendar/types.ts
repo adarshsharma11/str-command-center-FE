@@ -18,7 +18,7 @@ export interface CalendarBooking {
   checkOut: Date;
   channel: 'airbnb' | 'vrbo' | 'direct' | 'booking';
   status: 'confirmed' | 'pending' | 'blocked';
-  paymentStatus?: 'paid' | 'partial' | 'unpaid';
+  paymentStatus?: 'paid' | 'partial' | 'unpaid' | 'pending';
   guestNotes?: string;
   guestCount?: number;
   guestEmail?: string;
