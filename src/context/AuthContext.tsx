@@ -5,11 +5,10 @@ import { env } from '@/config/env';
 
 // ============================================================
 // DEV MODE AUTH BYPASS
-// Set this to true to bypass authentication during development
+// Set VITE_DEV_MODE=true in .env.development to bypass authentication
 // This allows testing the app without needing backend servers running
-// TODO: Your coders can toggle this or use an env variable
 // ============================================================
-const DEV_MODE_BYPASS_AUTH = false;
+const DEV_MODE_BYPASS_AUTH = env.devMode;
 
 type AuthContextValue = {
   token: string | null;
@@ -94,6 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const inactivityTimerRef = useRef<number | null>(null);
   useEffect(() => {
+    // Skip inactivity timer in dev mode
+    if (DEV_MODE_BYPASS_AUTH) return;
+
     const resetTimer = () => {
       if (inactivityTimerRef.current) {
         window.clearTimeout(inactivityTimerRef.current);
