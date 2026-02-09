@@ -18,7 +18,7 @@ interface OwnerStatementPreviewProps {
   data: OwnerStatementData;
 }
 
-// TODO: [INTERN] Replace with actual services data from API
+// TODO: [ADARSH] Replace with actual services data from API
 const MOCK_SERVICES_BY_PROPERTY: Record<string, { name: string; revenue: number; bookings: number }[]> = {
   '1': [
     { name: 'Private Chef', revenue: 1800, bookings: 3 },

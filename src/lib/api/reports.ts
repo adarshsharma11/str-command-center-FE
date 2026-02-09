@@ -18,7 +18,7 @@ import type {
 } from '@/types/reports';
 
 // --- Mock Data ---
-// TODO: [INTERN] Remove mock data once backend API is connected
+// TODO: [ADARSH] Remove mock data once backend API is connected
 // These mocks demonstrate the expected API response structure
 
 const MOCK_OWNER_STATEMENT: OwnerStatementData = {
@@ -239,11 +239,11 @@ const MOCK_SCHEDULED_REPORTS: ScheduledReport[] = [
 
 /**
  * Fetch Owner Statement Report
- * TODO: [INTERN] Connect to backend API at GET /api/v1/reports/owner-statement
+ * TODO: [ADARSH] Connect to backend API at GET /api/v1/reports/owner-statement
  * Query params: from, to, propertyIds (comma-separated), ownerIds (comma-separated)
  */
 export async function fetchOwnerStatement(filters: ReportFilters): Promise<ReportResponse<OwnerStatementData>> {
-  // TODO: [INTERN] Uncomment when backend is ready:
+  // TODO: [ADARSH] Uncomment when backend is ready:
   // const params = new URLSearchParams({ from: filters.from, to: filters.to });
   // if (filters.propertyIds?.length) params.append('propertyIds', filters.propertyIds.join(','));
   // if (filters.ownerIds?.length) params.append('ownerIds', filters.ownerIds.join(','));
@@ -259,7 +259,7 @@ export async function fetchOwnerStatement(filters: ReportFilters): Promise<Repor
 
 /**
  * Fetch Booking Summary Report
- * TODO: [INTERN] Connect to backend API at GET /api/v1/reports/booking-summary
+ * TODO: [ADARSH] Connect to backend API at GET /api/v1/reports/booking-summary
  */
 export async function fetchBookingSummary(filters: ReportFilters): Promise<ReportResponse<BookingSummaryData>> {
   await new Promise(resolve => setTimeout(resolve, 800));
@@ -272,7 +272,7 @@ export async function fetchBookingSummary(filters: ReportFilters): Promise<Repor
 
 /**
  * Fetch Service Revenue Report
- * TODO: [INTERN] Connect to backend API at GET /api/v1/reports/service-revenue
+ * TODO: [ADARSH] Connect to backend API at GET /api/v1/reports/service-revenue
  */
 export async function fetchServiceRevenue(filters: ReportFilters): Promise<ReportResponse<ServiceRevenueData>> {
   await new Promise(resolve => setTimeout(resolve, 800));
@@ -285,7 +285,7 @@ export async function fetchServiceRevenue(filters: ReportFilters): Promise<Repor
 
 /**
  * Fetch Service Provider Report
- * TODO: [INTERN] Connect to backend API at GET /api/v1/reports/service-provider
+ * TODO: [ADARSH] Connect to backend API at GET /api/v1/reports/service-provider
  * Query params: from, to, providerId
  */
 export async function fetchServiceProvider(filters: ReportFilters): Promise<ReportResponse<ServiceProviderData>> {
@@ -299,7 +299,7 @@ export async function fetchServiceProvider(filters: ReportFilters): Promise<Repo
 
 /**
  * Fetch Occupancy Report
- * TODO: [INTERN] Connect to backend API at GET /api/v1/reports/occupancy
+ * TODO: [ADARSH] Connect to backend API at GET /api/v1/reports/occupancy
  */
 export async function fetchOccupancyReport(filters: ReportFilters): Promise<ReportResponse<OccupancyReportData>> {
   await new Promise(resolve => setTimeout(resolve, 800));
@@ -312,7 +312,7 @@ export async function fetchOccupancyReport(filters: ReportFilters): Promise<Repo
 
 /**
  * Fetch Performance Report
- * TODO: [INTERN] Connect to backend API at GET /api/v1/reports/performance
+ * TODO: [ADARSH] Connect to backend API at GET /api/v1/reports/performance
  * Query params: from, to, comparison (month|quarter|year)
  */
 export async function fetchPerformanceReport(filters: ReportFilters): Promise<ReportResponse<PerformanceReportData>> {
@@ -326,11 +326,11 @@ export async function fetchPerformanceReport(filters: ReportFilters): Promise<Re
 
 /**
  * Send report via email
- * TODO: [INTERN] Connect to backend API at POST /api/v1/reports/send-email
+ * TODO: [ADARSH] Connect to backend API at POST /api/v1/reports/send-email
  * Body: { reportType, filters, recipients[], subject?, message?, attachPdf }
  */
 export async function sendReportEmail(request: EmailReportRequest): Promise<{ success: boolean; message: string }> {
-  // TODO: [INTERN] Uncomment when backend is ready:
+  // TODO: [ADARSH] Uncomment when backend is ready:
   // return apiClient.post(`${ENDPOINTS.REPORTS.SEND_EMAIL}`, request);
 
   await new Promise(resolve => setTimeout(resolve, 1000));
@@ -342,7 +342,7 @@ export async function sendReportEmail(request: EmailReportRequest): Promise<{ su
 
 /**
  * Fetch scheduled reports
- * TODO: [INTERN] Connect to backend API at GET /api/v1/reports/scheduled
+ * TODO: [ADARSH] Connect to backend API at GET /api/v1/reports/scheduled
  */
 export async function fetchScheduledReports(): Promise<ScheduledReportsResponse> {
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -354,7 +354,7 @@ export async function fetchScheduledReports(): Promise<ScheduledReportsResponse>
 
 /**
  * Create a scheduled report
- * TODO: [INTERN] Connect to backend API at POST /api/v1/reports/scheduled
+ * TODO: [ADARSH] Connect to backend API at POST /api/v1/reports/scheduled
  */
 export async function createScheduledReport(data: {
   report_type: ReportType;
@@ -376,7 +376,7 @@ export async function createScheduledReport(data: {
 
 /**
  * Delete a scheduled report
- * TODO: [INTERN] Connect to backend API at DELETE /api/v1/reports/scheduled/:id
+ * TODO: [ADARSH] Connect to backend API at DELETE /api/v1/reports/scheduled/:id
  */
 export async function deleteScheduledReport(id: string): Promise<{ success: boolean }> {
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -385,7 +385,7 @@ export async function deleteScheduledReport(id: string): Promise<{ success: bool
 
 /**
  * Toggle scheduled report active status
- * TODO: [INTERN] Connect to backend API at PATCH /api/v1/reports/scheduled/:id
+ * TODO: [ADARSH] Connect to backend API at PATCH /api/v1/reports/scheduled/:id
  */
 export async function toggleScheduledReport(id: string, isActive: boolean): Promise<{ success: boolean }> {
   await new Promise(resolve => setTimeout(resolve, 500));

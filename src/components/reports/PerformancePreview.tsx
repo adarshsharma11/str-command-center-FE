@@ -37,7 +37,7 @@ const YEARS = Array.from({ length: currentYear - 2019 }, (_, i) => ({
   label: String(2020 + i),
 })).reverse();
 
-// TODO: [INTERN] This function generates mock data for comparison periods
+// TODO: [ADARSH] This function generates mock data for comparison periods
 // Replace with actual API call that accepts comparison period parameters
 function generateComparisonData(
   currentData: PerformanceReportData,

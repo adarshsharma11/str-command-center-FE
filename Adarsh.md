@@ -54,12 +54,12 @@ Two tabs:
 
 ## What You Need To Do
 
-Look for `// TODO: [INTERN]` comments throughout the codebase. Here's the complete list:
+Look for `// TODO: [ADARSH]` comments throughout the codebase. Here's the complete list:
 
 ### Dashboard API (`/src/lib/api/dashboard.ts`)
 
 ```typescript
-// TODO: [INTERN] Connect to real Supabase endpoint
+// TODO: [ADARSH] Connect to real Supabase endpoint
 // Expected endpoint: GET /api/v1/dashboard/extended
 // Query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD
 ```
@@ -119,28 +119,28 @@ Look for `// TODO: [INTERN]` comments throughout the codebase. Here's the comple
 ### Report Filters (`/src/components/reports/ReportFilters.tsx`)
 
 ```typescript
-// TODO: [INTERN] Replace with actual API call to fetch properties
+// TODO: [ADARSH] Replace with actual API call to fetch properties
 const MOCK_PROPERTIES = [...];
 
-// TODO: [INTERN] Replace with actual API call to fetch owners
+// TODO: [ADARSH] Replace with actual API call to fetch owners
 const MOCK_OWNERS = [...];
 ```
 
 ### Pricing Page (`/src/pages/Pricing.tsx`)
 
 ```typescript
-// TODO: [INTERN] Fetch properties from API
+// TODO: [ADARSH] Fetch properties from API
 const MOCK_PROPERTIES = [...];
 
-// TODO: [INTERN] Replace with actual booking data from API
+// TODO: [ADARSH] Replace with actual booking data from API
 const MOCK_BOOKED_DATES = {...};
 
-// TODO: [INTERN] Load/save pricing config from Supabase
+// TODO: [ADARSH] Load/save pricing config from Supabase
 // Table: property_pricing_config
 // Columns: property_id, min_price, max_price, weekend_premium, last_minute_discount,
 //          high_demand_threshold, high_demand_surge, created_at, updated_at
 
-// TODO: [INTERN] Save calculated prices to Supabase
+// TODO: [ADARSH] Save calculated prices to Supabase
 // Suggestion: Create a property_daily_prices table with columns:
 // property_id, date, base_price, ai_price, manual_price, factors (JSONB), created_at
 ```

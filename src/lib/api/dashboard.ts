@@ -130,7 +130,7 @@ export type DashboardExtendedResponse = {
 };
 
 // --- Mock Data ---
-// TODO: [INTERN] Remove mock data once backend API is connected
+// TODO: [ADARSH] Remove mock data once backend API is connected
 // These mocks demonstrate the expected API response structure
 
 const MOCK_EXTENDED_DATA: DashboardDataExtended = {
@@ -241,11 +241,11 @@ export async function fetchDashboardMetrics(): Promise<DashboardResponse> {
 
 /**
  * Fetch extended dashboard metrics with all new analytics
- * TODO: [INTERN] Connect to backend API at GET /api/v1/dashboard/extended
+ * TODO: [ADARSH] Connect to backend API at GET /api/v1/dashboard/extended
  * Query params: from (date), to (date) for filtering the date range
  */
 export async function fetchDashboardExtended(params?: { from?: string; to?: string }): Promise<DashboardExtendedResponse> {
-  // TODO: [INTERN] Replace mock with actual API call:
+  // TODO: [ADARSH] Replace mock with actual API call:
   // const queryString = params ? `?from=${params.from}&to=${params.to}` : '';
   // return apiClient.get<DashboardExtendedResponse>(`${ENDPOINTS.DASHBOARD.EXTENDED}${queryString}`);
 
@@ -271,7 +271,7 @@ export function useDashboardMetricsQuery(options?: UseQueryOptions<DashboardResp
 
 /**
  * Hook for fetching extended dashboard data with date range filtering
- * TODO: [INTERN] This hook will call the extended endpoint once backend is ready
+ * TODO: [ADARSH] This hook will call the extended endpoint once backend is ready
  */
 export function useDashboardExtendedQuery(
   params?: { from?: string; to?: string },

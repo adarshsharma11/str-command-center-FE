@@ -24,7 +24,7 @@ interface ReportFiltersProps {
   onEmail: () => void;
 }
 
-// TODO: [INTERN] Replace with actual API call to fetch properties
+// TODO: [ADARSH] Replace with actual API call to fetch properties
 const MOCK_PROPERTIES = [
   { id: '1', name: 'Ocean View Villa' },
   { id: '2', name: 'Mountain Retreat' },
@@ -33,7 +33,7 @@ const MOCK_PROPERTIES = [
   { id: '5', name: 'Lakeside Cabin' },
 ];
 
-// TODO: [INTERN] Replace with actual API call to fetch owners
+// TODO: [ADARSH] Replace with actual API call to fetch owners
 const MOCK_OWNERS = [
   { id: 'owner-1', name: 'Robert Williams' },
   { id: 'owner-2', name: 'Sarah Johnson' },

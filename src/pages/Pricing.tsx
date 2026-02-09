@@ -58,7 +58,7 @@ import {
   startOfDay,
 } from 'date-fns';
 
-// Mock properties - TODO: [INTERN] Replace with actual API call
+// Mock properties - TODO: [ADARSH] Replace with actual API call
 const MOCK_PROPERTIES = [
   { id: '1', name: 'Ocean View Villa', basePrice: 450, bedrooms: 4 },
   { id: '2', name: 'Mountain Retreat', basePrice: 600, bedrooms: 5 },
@@ -67,7 +67,7 @@ const MOCK_PROPERTIES = [
   { id: '5', name: 'Lakeside Cabin', basePrice: 280, bedrooms: 3 },
 ];
 
-// Mock booked dates per property - TODO: [INTERN] Replace with actual booking data
+// Mock booked dates per property - TODO: [ADARSH] Replace with actual booking data
 const MOCK_BOOKED_DATES: Record<string, string[]> = {
   '1': ['2026-02-14', '2026-02-15', '2026-02-20', '2026-02-21', '2026-02-22', '2026-03-05', '2026-03-06', '2026-03-07'],
   '2': ['2026-02-10', '2026-02-11', '2026-02-12', '2026-02-28', '2026-03-01'],

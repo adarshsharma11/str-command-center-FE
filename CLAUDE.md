@@ -45,7 +45,7 @@ Set `VITE_DEV_MODE=true` in `.env.development` to bypass auth and use mock data.
 - Pricing config: Mock (in-component)
 - Properties/Owners lists: Mock (TODO markers)
 
-Look for `// TODO: [INTERN]` comments for backend connection points.
+Look for `// TODO: [ADARSH]` comments for backend connection points.
 
 ## Build Commands
 ```bash
