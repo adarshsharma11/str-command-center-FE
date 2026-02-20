@@ -48,7 +48,7 @@ export default function Bookings() {
       ) : (
         <div className="p-6 space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Bookings</h1>
+            <h1 className="text-3xl font-bold text-foreground">New Bookings</h1>
             <p className="text-muted-foreground">View and manage all reservations</p>
           </div>
 
