@@ -59,7 +59,7 @@ export default function Properties() {
   const page = 1;
   const limit = 10;
   const { data, isLoading } = usePropertiesQuery(page, limit);
-  const apiItems = data?.data?.data ?? [];
+  const apiItems = data?.data ?? [];
   const properties: PropertyView[] = apiItems.map(propertyMappers.toViewProperty);
   const listings: PropertyListingView[] = apiItems.flatMap(propertyMappers.toPropertyListings);
 

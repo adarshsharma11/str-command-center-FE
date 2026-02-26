@@ -105,8 +105,9 @@ export default function Calendar() {
 
   // Transform properties from API
   const properties = useMemo(() => {
-    if (!propertiesData?.data?.data) return [];
-    return propertiesData.data.data.map(property => ({
+    if (!propertiesData?.data) return [];
+    const items = Array.isArray(propertiesData.data) ? propertiesData.data : [];
+    return items.map(property => ({
       id: String(property.id),
       name: property.name || `Property ${property.id}`,
     }));
