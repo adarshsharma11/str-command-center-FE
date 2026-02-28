@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Layout } from '@/components/Layout';
@@ -19,6 +20,7 @@ export default function Properties() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [copiedPropertyId, setCopiedPropertyId] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const {
     register,
@@ -44,6 +46,7 @@ export default function Properties() {
         title: 'Property created successfully',
         description: 'Your new property has been added to the system.',
       });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
       setIsCreateDialogOpen(false);
       reset();
     },
