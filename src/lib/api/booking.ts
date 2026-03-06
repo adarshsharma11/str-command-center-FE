@@ -3,6 +3,7 @@ import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { CalendarBooking, VendorTask } from '@/components/calendar/types';
 import { parseAsLocalTime } from '@/lib/utils';
+import { differenceInDays } from 'date-fns';
 
 type BookingApiItem = {
   reservation_id: string;
@@ -14,7 +15,7 @@ type BookingApiItem = {
   check_out?: string;
   check_in_date?: string;
   check_out_date?: string;
-  night?: number;
+  nights?: number;
   reservation_status?: string;
   payment_status?: string;
   total_amount?: number;
@@ -67,13 +68,19 @@ export function toViewBooking(b: BookingApiItem): ViewBooking {
   const checkInStr = b.check_in_date || b.check_in || b.created_at;
   const checkOutStr = b.check_out_date || b.check_out || b.check_in || b.created_at;
   
+  const checkIn = parseAsLocalTime(checkInStr);
+  const checkOut = parseAsLocalTime(checkOutStr);
+  
+  // Calculate nights from dates if not provided by API
+  const calculatedNights = Math.max(0, differenceInDays(checkOut, checkIn));
+  
   return {
     id: b.reservation_id,
     guestName: b.guest_name ?? '—',
     propertyName: b.property_name ?? '—',
-    checkIn: parseAsLocalTime(checkInStr),
-    checkOut: parseAsLocalTime(checkOutStr),
-    nights: typeof b.night === 'number' ? b.night : 0,
+    checkIn,
+    checkOut,
+    nights: typeof b.nights === 'number' ? b.nights : calculatedNights,
     platform: normalizePlatform(b.platform),
     reservationStatus: b.reservation_status ?? 'Confirmed',
     paymentStatus: (!b.total_amount) ? 'Pending' : (b.payment_status ?? 'Paid'),
