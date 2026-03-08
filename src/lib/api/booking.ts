@@ -1,4 +1,4 @@
-import { useQuery, QueryOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, QueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { CalendarBooking, VendorTask } from '@/components/calendar/types';
@@ -43,6 +43,7 @@ type BookingApiResponse = {
 export type ViewBooking = {
   id: string;
   guestName: string;
+  guestEmail?: string;
   propertyName: string;
   checkIn: Date;
   checkOut: Date;
@@ -77,6 +78,7 @@ export function toViewBooking(b: BookingApiItem): ViewBooking {
   return {
     id: b.reservation_id,
     guestName: b.guest_name ?? '—',
+    guestEmail: b.guest_email,
     propertyName: b.property_name ?? '—',
     checkIn,
     checkOut,
@@ -238,6 +240,24 @@ export function useCalendarBookingsQuery(page = 1, limit = 50, options?: Omit<Qu
       };
     },
     staleTime: 30_000,
+    ...options,
+  });
+}
+
+export type SendWelcomePayload = {
+  reservation_id: string;
+  guest_email: string;
+};
+
+export type SendWelcomeResponse = {
+  success: boolean;
+  message: string;
+};
+
+export function useSendWelcomeMutation(options?: UseMutationOptions<SendWelcomeResponse, Error, SendWelcomePayload>) {
+  return useMutation({
+    mutationFn: (payload: SendWelcomePayload) => 
+      apiClient.post<SendWelcomeResponse>(ENDPOINTS.BOOKING.SEND_WELCOME, payload),
     ...options,
   });
 }
