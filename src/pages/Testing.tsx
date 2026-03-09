@@ -249,7 +249,7 @@ export default function Testing() {
   };
 
   const { data: propertiesData, isLoading: isLoadingProperties } = useAllPropertiesQuery();
-  const properties = (Array.isArray(propertiesData?.data) ? propertiesData.data : propertiesData?.data?.data) || [];
+  const properties = (Array.isArray(propertiesData?.data) ? propertiesData.data : []) || [];
 
   // Fetch service categories for service selection
   const { data: serviceCategoriesData, isLoading: isLoadingServiceCategories } = useServiceCategoriesQuery();

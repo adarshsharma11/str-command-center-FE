@@ -70,31 +70,31 @@ export default function Dashboard() {
   const kpis: KPI[] = [
     {
       label: 'Total Revenue',
-      value: `$${data.total_revenue.value.toLocaleString()}`,
-      change: data.total_revenue.percentage_change,
-      changeLabel: data.total_revenue.label,
-      trend: data.total_revenue.trend_direction,
+      value: `$${(data.total_revenue?.value ?? 0).toLocaleString()}`,
+      change: data.total_revenue?.percentage_change,
+      changeLabel: data.total_revenue?.label,
+      trend: data.total_revenue?.trend_direction,
     },
     {
       label: 'Property Revenue',
-      value: `$${data.property_revenue.value.toLocaleString()}`,
-      change: data.property_revenue.percentage_change,
-      changeLabel: data.property_revenue.label,
-      trend: data.property_revenue.trend_direction,
+      value: `$${(data.property_revenue?.value ?? 0).toLocaleString()}`,
+      change: data.property_revenue?.percentage_change,
+      changeLabel: data.property_revenue?.label,
+      trend: data.property_revenue?.trend_direction,
     },
     {
       label: 'Service Revenue',
-      value: `$${data.service_revenue.value.toLocaleString()}`,
-      change: data.service_revenue.percentage_change,
-      changeLabel: data.service_revenue.label,
-      trend: data.service_revenue.trend_direction,
+      value: `$${(data.service_revenue?.value ?? 0).toLocaleString()}`,
+      change: data.service_revenue?.percentage_change,
+      changeLabel: data.service_revenue?.label,
+      trend: data.service_revenue?.trend_direction,
     },
     {
       label: 'Active Bookings',
-      value: data.active_bookings.value,
-      change: data.active_bookings.percentage_change,
-      changeLabel: data.active_bookings.label,
-      trend: data.active_bookings.trend_direction,
+      value: (data.active_bookings?.value ?? 0).toLocaleString(),
+      change: data.active_bookings?.percentage_change,
+      changeLabel: data.active_bookings?.label,
+      trend: data.active_bookings?.trend_direction,
     },
   ];
 
@@ -145,7 +145,7 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {data.top_performing_properties.map((property, index) => (
+              {(data.top_performing_properties ?? []).map((property, index) => (
                 <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold">
@@ -157,7 +157,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-foreground">${property.revenue.toLocaleString()}</p>
+                    <p className="font-semibold text-foreground">${(property.revenue ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">revenue</p>
                   </div>
                 </div>
@@ -173,13 +173,13 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {data.luxury_services_revenue.map((service, index) => (
+              {(data.luxury_services_revenue ?? []).map((service, index) => (
                 <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <div>
                     <p className="font-medium text-foreground">{service.name}</p>
                     <p className="text-sm text-muted-foreground">{service.bookings_count} bookings</p>
                   </div>
-                  <p className="font-semibold text-foreground">${service.revenue.toLocaleString()}</p>
+                  <p className="font-semibold text-foreground">${(service.revenue ?? 0).toLocaleString()}</p>
                 </div>
               ))}
             </CardContent>
@@ -196,7 +196,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {data.guest_origins.map((location, index) => (
+              {(data.guest_origins ?? []).map((location, index) => (
                 <div key={index} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">{location.origin}</span>
@@ -205,7 +205,7 @@ export default function Dashboard() {
                         {location.bookings} bookings
                       </span>
                       <span className="text-sm font-semibold text-foreground">
-                        ${location.revenue.toLocaleString()}
+                        ${(location.revenue ?? 0).toLocaleString()}
                       </span>
                       <Badge variant="secondary">{location.percentage}%</Badge>
                     </div>
