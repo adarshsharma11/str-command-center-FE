@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
 import { NavLink } from '@/components/NavLink';
-import { LayoutDashboard, Calendar, Inbox, Users, Zap, Home, BookOpen, Settings, LogOut, FlaskConical } from 'lucide-react';
+import { LayoutDashboard, Calendar, Inbox, Users, Zap, Home, BookOpen, FileBarChart, DollarSign, Settings, LogOut, FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
@@ -42,6 +43,14 @@ const navItems = [{
   icon: BookOpen,
   label: 'Bookings'
 }, {
+  to: '/reports',
+  icon: FileBarChart,
+  label: 'Reports'
+}, {
+  to: '/pricing',
+  icon: DollarSign,
+  label: 'Pricing'
+}, {
   to: '/settings',
   icon: Settings,
   label: 'Settings'
@@ -54,7 +63,7 @@ export function Layout({
   children
 }: LayoutProps) {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, isDevMode } = useAuth();
   
   const handleLogout = async () => {
     await logout();
@@ -63,8 +72,13 @@ export function Layout({
   return <div className="flex min-h-screen w-full bg-background">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-card border-r border-border">
-        <div className="flex items-center h-16 px-6 border-b border-border">
+        <div className="flex items-center justify-between h-16 px-6 border-b border-border">
           <h1 className="text-xl font-bold text-primary">MOMA.HOUSE CRM</h1>
+          {isDevMode && (
+            <Badge variant="destructive" className="text-xs">
+              DEV MODE
+            </Badge>
+          )}
         </div>
         
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">

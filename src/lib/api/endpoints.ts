@@ -32,6 +32,22 @@ export const ENDPOINTS = {
   },
   DASHBOARD: {
     METRICS: `${API_PREFIX}/dashboard`,
+    EXTENDED: `${API_PREFIX}/dashboard/extended`,
+    FORECAST: `${API_PREFIX}/dashboard/forecast`,
+    OCCUPANCY: `${API_PREFIX}/dashboard/occupancy`,
+    REVENUE_TRENDS: `${API_PREFIX}/dashboard/revenue-trends`,
+    CHANNEL_REVENUE: `${API_PREFIX}/dashboard/channel-revenue`,
+    UPCOMING_EVENTS: `${API_PREFIX}/dashboard/upcoming-events`,
+  },
+  REPORTS: {
+    OWNER_STATEMENT: `${API_PREFIX}/reports/owner-statement`,
+    BOOKING_SUMMARY: `${API_PREFIX}/reports/booking-summary`,
+    SERVICE_REVENUE: `${API_PREFIX}/reports/service-revenue`,
+    OCCUPANCY: `${API_PREFIX}/reports/occupancy`,
+    PERFORMANCE: `${API_PREFIX}/reports/performance`,
+    SEND_EMAIL: `${API_PREFIX}/reports/send-email`,
+    SCHEDULED: `${API_PREFIX}/reports/scheduled`,
+    SCHEDULED_DETAIL: `${API_PREFIX}/reports/scheduled/:id`,
   },
   EMAILS: {
     INBOX: `${API_PREFIX}/emails/inbox`,

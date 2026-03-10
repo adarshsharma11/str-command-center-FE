@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { env } from "./config/env";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";
@@ -12,6 +13,8 @@ import Crews from "./pages/Crews";
 import Automation from "./pages/Automation";
 import Properties from "./pages/Properties";
 import Bookings from "./pages/Bookings";
+import Reports from "./pages/Reports";
+import Pricing from "./pages/Pricing";
 import Settings from "./pages/Settings";
 import Testing from "./pages/Testing"; // New testing page for developers
 import NotFound from "./pages/NotFound";
@@ -40,19 +43,23 @@ const queryClient = new QueryClient({
 });
 
 function AuthWatcher() {
-  const { token } = useAuth();
+  const { token, isDevMode } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => {
+    // Skip auth check in dev mode
+    if (isDevMode) return;
     if (!token && location.pathname !== "/auth") {
       navigate("/auth", { replace: true });
     }
-  }, [token, location.pathname, navigate]);
+  }, [token, location.pathname, navigate, isDevMode]);
   useEffect(() => {
+    // Skip unauthorized handler in dev mode
+    if (isDevMode) return;
     const handler = () => navigate("/auth", { replace: true });
     window.addEventListener("auth:unauthorized", handler);
     return () => window.removeEventListener("auth:unauthorized", handler);
-  }, [navigate]);
+  }, [navigate, isDevMode]);
   return null;
 }
 
@@ -65,8 +72,8 @@ const App = () => (
         <BrowserRouter>
           <AuthWatcher />
           <Routes>
-            {/* Root redirects to auth (or dashboard if logged in via PublicRoute) */}
-            <Route path="/" element={<Navigate to="/auth" replace />} />
+            {/* Root redirects to dashboard in dev mode, otherwise to auth */}
+            <Route path="/" element={<Navigate to={env.devMode ? "/dashboard" : "/auth"} replace />} />
             
             {/* Public routes - only accessible when NOT logged in */}
             <Route element={<PublicRoute />}>
@@ -82,6 +89,8 @@ const App = () => (
               <Route path="/automation" element={<Automation />} />
               <Route path="/properties" element={<Properties />} />
               <Route path="/bookings" element={<Bookings />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/testing" element={<Testing />} /> {/* Developer testing page */}
             </Route>
