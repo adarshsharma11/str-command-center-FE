@@ -79,6 +79,7 @@ export default function Reports() {
                   onBack={handleBackToSelection}
                   onSchedule={() => setScheduleDialogOpen(true)}
                   onEmail={() => setEmailDialogOpen(true)}
+                  filters={filters}
                 />
 
                 {/* Report Preview */}

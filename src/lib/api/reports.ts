@@ -329,15 +329,8 @@ export async function fetchPerformanceReport(filters: ReportFilters): Promise<Re
  * TODO: [ADARSH] Connect to backend API at POST /api/v1/reports/send-email
  * Body: { reportType, filters, recipients[], subject?, message?, attachPdf }
  */
-export async function sendReportEmail(request: EmailReportRequest): Promise<{ success: boolean; message: string }> {
-  // TODO: [ADARSH] Uncomment when backend is ready:
-  // return apiClient.post(`${ENDPOINTS.REPORTS.SEND_EMAIL}`, request);
-
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return {
-    success: true,
-    message: `Report sent to ${request.recipients.length} recipient(s)`,
-  };
+export async function sendReportEmail(request: EmailReportRequest & { pdf_base64?: string }): Promise<{ success: boolean; message: string }> {
+  return apiClient.post(`${ENDPOINTS.REPORTS.SEND_EMAIL}`, request);
 }
 
 /**

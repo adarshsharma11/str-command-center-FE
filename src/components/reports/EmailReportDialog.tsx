@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useSendReportEmailMutation } from '@/lib/api/reports';
+import { generateReportPDFBase64 } from '@/lib/utils/pdfDownload';
 import type { ReportType, ReportFilters } from '@/types/reports';
 
 interface EmailReportDialogProps {
@@ -112,8 +113,22 @@ export function EmailReportDialog({
     );
   };
 
-  const onSubmit = (values: FormValues) => {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const onSubmit = async (values: FormValues) => {
     if (!reportType) return;
+
+    let pdf_base64: string | undefined;
+    if (values.attachPdf) {
+      setIsGeneratingPdf(true);
+      try {
+        pdf_base64 = await generateReportPDFBase64(reportType, filters);
+      } catch (err) {
+        console.error('PDF generation error:', err);
+      } finally {
+        setIsGeneratingPdf(false);
+      }
+    }
 
     sendMutation.mutate({
       report_type: reportType,
@@ -122,6 +137,7 @@ export function EmailReportDialog({
       subject: values.subject,
       message: values.message,
       attach_pdf: values.attachPdf,
+      pdf_base64,
     });
   };
 
@@ -246,8 +262,8 @@ export function EmailReportDialog({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={sendMutation.isPending}>
-                {sendMutation.isPending ? 'Sending...' : 'Send Email'}
+              <Button type="submit" disabled={sendMutation.isPending || isGeneratingPdf}>
+                {isGeneratingPdf ? 'Generating PDF...' : sendMutation.isPending ? 'Sending...' : 'Send Email'}
               </Button>
             </DialogFooter>
           </form>

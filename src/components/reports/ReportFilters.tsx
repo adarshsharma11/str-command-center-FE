@@ -1,4 +1,5 @@
-import { ArrowLeft, CalendarIcon, Download, Mail, Clock, Filter } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, CalendarIcon, Download, Mail, Clock, Filter, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type { ReportType } from '@/types/reports';
+import { toast } from 'sonner';
+import { downloadReportPDF } from '@/lib/utils/pdfDownload';
+import type { ReportType, ReportFilters as ReportFiltersType } from '@/types/reports';
 import type { UseDateRangeFilterReturn, DateRangePreset } from '@/hooks/useDateRangeFilter';
 
 interface ReportFiltersProps {
@@ -22,6 +25,7 @@ interface ReportFiltersProps {
   onBack: () => void;
   onSchedule: () => void;
   onEmail: () => void;
+  filters: ReportFiltersType;
 }
 
 // TODO: [ADARSH] Replace with actual API call to fetch properties
@@ -59,8 +63,23 @@ export function ReportFilters({
   onBack,
   onSchedule,
   onEmail,
+  filters,
 }: ReportFiltersProps) {
   const { dateRange, preset, setPreset, setDateRange, presets } = dateFilter;
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      await downloadReportPDF(reportType, filters);
+      toast.success('PDF downloaded successfully');
+    } catch (err) {
+      console.error('PDF download error:', err);
+      toast.error('Failed to download PDF');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const toggleProperty = (id: string) => {
     if (selectedPropertyIds.includes(id)) {
@@ -104,9 +123,13 @@ export function ReportFilters({
               <Mail className="h-4 w-4 mr-2" />
               Email
             </Button>
-            <Button size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
+            <Button size="sm" onClick={handleDownload} disabled={isDownloading}>
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              {isDownloading ? 'Generating...' : 'Download PDF'}
             </Button>
           </div>
         </div>
