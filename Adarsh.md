@@ -1,10 +1,31 @@
 # Adarsh - Implementation Handoff Guide
 
-Hey Adarsh! This document explains all the recent changes and what you need to do to connect them to the Supabase backend.
+Hey Adarsh! This document explains the latest frontend updates and what changed in this PR. **Important: We've removed Supabase entirely.** The app now uses the Portgas DB backend — all API calls go through the existing Express API layer (`/api/v1/*`). No Supabase client, no Supabase auth, no Supabase anything.
 
 ---
 
-## Summary of Changes
+## What's In This PR
+
+This PR merges the enhanced frontend (pricing, reports, dashboard) into the main branch. It also:
+
+1. **Removes Supabase** — deleted `@supabase/supabase-js` dependency and `src/integrations/supabase/` directory
+2. **Merges your recent backend work** — booking API improvements, property refresh, CI/CD pipeline, psql upgrade (PRs #5 and #6)
+3. **Adds null safety** — all dashboard data fields use `?? 0` and `?? []` so they won't crash if the backend returns partial data
+4. **Adds dynamic property loading** in Testing page via `useAllPropertiesQuery` (falls back to mock if API unavailable)
+
+### Files that changed in the merge:
+- `.github/workflows/deploy.yaml` — your CI/CD (kept as-is)
+- `src/lib/api/booking.ts` — your booking API improvements (kept as-is)
+- `src/lib/api/endpoints.ts` — merged endpoint additions from both sides
+- `src/lib/api/property.ts` — your property API fixes (kept as-is)
+- `src/pages/Bookings.tsx` — your bookings page improvements (kept as-is)
+- `src/pages/Calendar.tsx`, `Properties.tsx` — your backend integration (kept as-is)
+- `src/pages/Dashboard.tsx` — **merged**: our enhanced UI + your null safety
+- `src/pages/Testing.tsx` — **merged**: our polling + your dynamic property loading
+
+---
+
+## Summary of Frontend Changes (New Stuff)
 
 ### 1. Dashboard Enhancement
 - **New charts**: Revenue Trends (year-over-year comparison), Occupancy by Property, Revenue by Channel
@@ -59,7 +80,7 @@ Look for `// TODO: [ADARSH]` comments throughout the codebase. Here's the comple
 ### Dashboard API (`/src/lib/api/dashboard.ts`)
 
 ```typescript
-// TODO: [ADARSH] Connect to real Supabase endpoint
+// TODO: [ADARSH] Connect to real API endpoint
 // Expected endpoint: GET /api/v1/dashboard/extended
 // Query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD
 ```
@@ -135,12 +156,12 @@ const MOCK_PROPERTIES = [...];
 // TODO: [ADARSH] Replace with actual booking data from API
 const MOCK_BOOKED_DATES = {...};
 
-// TODO: [ADARSH] Load/save pricing config from Supabase
+// TODO: [ADARSH] Load/save pricing config from Portgas DB
 // Table: property_pricing_config
 // Columns: property_id, min_price, max_price, weekend_premium, last_minute_discount,
 //          high_demand_threshold, high_demand_surge, created_at, updated_at
 
-// TODO: [ADARSH] Save calculated prices to Supabase
+// TODO: [ADARSH] Save calculated prices to Portgas DB
 // Suggestion: Create a property_daily_prices table with columns:
 // property_id, date, base_price, ai_price, manual_price, factors (JSONB), created_at
 ```
@@ -200,7 +221,7 @@ DELETE /api/v1/reports/scheduled/:id
 ```sql
 CREATE TABLE scheduled_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id),
+  user_id UUID REFERENCES users(id),
   report_type TEXT NOT NULL,
   name TEXT NOT NULL,
   frequency TEXT NOT NULL CHECK (frequency IN ('weekly', 'monthly', 'quarterly')),

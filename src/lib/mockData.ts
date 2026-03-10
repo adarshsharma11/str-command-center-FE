@@ -1,4 +1,4 @@
-// Mock data for development - TODO: Replace with Supabase queries
+// Mock data for development - TODO: Replace with API calls
 
 import type { 
   Property, Listing, Task, Booking, Message, Conversation, 
