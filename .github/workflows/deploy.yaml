@@ -18,6 +18,9 @@ jobs:
           script: |
             cd /var/www/app/str-command-center-FE
             git pull origin main
+            rm -rf node_modules
+            rm package-lock.json yarn.lock
+            npm cache clean --force
             npm install
             npm run build
             systemctl reload nginx
