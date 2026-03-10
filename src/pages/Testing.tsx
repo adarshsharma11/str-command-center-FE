@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Calendar, Clock, User, Home, Mail, Phone, Plus, Trash2, Send, CheckCircle2, AlertCircle, Loader2, RefreshCw, DollarSign } from 'lucide-react';
+import { useAllPropertiesQuery } from '@/lib/api/property';
 
 // ============================================================
 // TYPES
@@ -126,6 +127,9 @@ export default function Testing() {
       // Server might not be running yet
     }
   }, []);
+
+  const { data: propertiesData, isLoading: isLoadingProperties } = useAllPropertiesQuery();
+  const properties = (Array.isArray(propertiesData?.data) ? propertiesData.data : []) || [];
 
   useEffect(() => {
     pollBookings();

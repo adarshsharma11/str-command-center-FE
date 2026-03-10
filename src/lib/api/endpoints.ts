@@ -1,4 +1,4 @@
-export const API_PREFIX = "/api/v1" as const;
+export const API_PREFIX = "/v1" as const;
 
 export const ENDPOINTS = {
   AUTH: {
@@ -7,6 +7,7 @@ export const ENDPOINTS = {
   },
   BOOKING : {
     LIST : `${API_PREFIX}/bookings`,
+    SEND_WELCOME: `${API_PREFIX}/bookings/send-welcome`,
   },
   PROPERTY : {
     LIST : `${API_PREFIX}/property`,

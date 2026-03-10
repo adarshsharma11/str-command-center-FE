@@ -22,12 +22,7 @@ type PropertyListResponse = {
   page?: number;
   limit?: number;
   total?: number;
-  data: {
-    data: PropertyApiItem[];
-    page?: number;
-    limit?: number;
-    total?: number;
-  };
+  data: PropertyApiItem[];
 };
 
 export type PropertyView = {

@@ -93,12 +93,12 @@ export default function Dashboard() {
 
   // Map API data to KPIs (simplified - no comparison labels)
   const kpis: KPI[] = [
-    { label: 'Total Revenue', value: `$${data.total_revenue.value.toLocaleString()}` },
-    { label: 'Property Revenue', value: `$${data.property_revenue.value.toLocaleString()}` },
-    { label: 'Service Revenue', value: `$${data.service_revenue.value.toLocaleString()}` },
-    { label: 'Occupancy Rate', value: `${data.overall_occupancy_rate.value}%` },
-    { label: 'Avg Daily Rate', value: `$${data.average_daily_rate.value.toLocaleString()}` },
-    { label: 'Pending Payments', value: `$${data.pending_payments.value.toLocaleString()}` },
+    { label: 'Total Revenue', value: `$${(data.total_revenue?.value ?? 0).toLocaleString()}` },
+    { label: 'Property Revenue', value: `$${(data.property_revenue?.value ?? 0).toLocaleString()}` },
+    { label: 'Service Revenue', value: `$${(data.service_revenue?.value ?? 0).toLocaleString()}` },
+    { label: 'Occupancy Rate', value: `${data.overall_occupancy_rate?.value ?? 0}%` },
+    { label: 'Avg Daily Rate', value: `$${(data.average_daily_rate?.value ?? 0).toLocaleString()}` },
+    { label: 'Pending Payments', value: `$${(data.pending_payments?.value ?? 0).toLocaleString()}` },
   ];
 
   // Map API tasks to Task interface
@@ -198,7 +198,7 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {data.top_performing_properties.map((property, index) => (
+                {(data.top_performing_properties ?? []).map((property, index) => (
                   <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold">
@@ -210,7 +210,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-foreground">${property.revenue.toLocaleString()}</p>
+                      <p className="font-semibold text-foreground">${(property.revenue ?? 0).toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">revenue</p>
                     </div>
                   </div>
@@ -228,13 +228,13 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {data.luxury_services_revenue.map((service, index) => (
+                {(data.luxury_services_revenue ?? []).map((service, index) => (
                   <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                     <div>
                       <p className="font-medium text-foreground">{service.name}</p>
                       <p className="text-sm text-muted-foreground">{service.bookings_count} bookings</p>
                     </div>
-                    <p className="font-semibold text-foreground">${service.revenue.toLocaleString()}</p>
+                    <p className="font-semibold text-foreground">${(service.revenue ?? 0).toLocaleString()}</p>
                   </div>
                 ))}
               </CardContent>
@@ -253,7 +253,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {data.guest_origins.map((location, index) => (
+                {(data.guest_origins ?? []).map((location, index) => (
                   <div key={index} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-foreground">{location.origin}</span>
@@ -262,7 +262,7 @@ export default function Dashboard() {
                           {location.bookings} bookings
                         </span>
                         <span className="text-sm font-semibold text-foreground">
-                          ${location.revenue.toLocaleString()}
+                          ${(location.revenue ?? 0).toLocaleString()}
                         </span>
                         <Badge variant="secondary">{location.percentage}%</Badge>
                       </div>

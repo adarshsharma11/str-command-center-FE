@@ -6,9 +6,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useBookingsQuery, toViewBooking, type ViewBooking } from '@/lib/api/booking';
+import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Mail, Loader2 } from 'lucide-react';
+import { useBookingsQuery, toViewBooking, type ViewBooking, useSendWelcomeMutation } from '@/lib/api/booking';
 import { BookingsPageSkeleton } from '@/components/skeletons/BookingsListSkeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function Bookings() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,11 +27,43 @@ export default function Bookings() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   
+  const [selectedBooking, setSelectedBooking] = useState<ViewBooking | null>(null);
+  const [guestEmail, setGuestEmail] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const { data, isLoading } = useBookingsQuery(page, limit, {
     platform: platformFilter,
     status: statusFilter,
     search: searchTerm,
   });
+
+  const sendWelcome = useSendWelcomeMutation({
+    onSuccess: (data) => {
+      toast.success(data.message || "Welcome email sent successfully!");
+      setIsModalOpen(false);
+      setGuestEmail('');
+      setSelectedBooking(null);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to send welcome email.");
+    }
+  });
+
+  const handleOpenDetails = (booking: ViewBooking) => {
+     setSelectedBooking(booking);
+     setGuestEmail(booking.guestEmail || '');
+     setIsModalOpen(true);
+   };
+
+  const handleSendWelcome = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBooking || !guestEmail) return;
+
+    sendWelcome.mutate({
+      reservation_id: selectedBooking.id,
+      guest_email: guestEmail,
+    });
+  };
   
   const apiBookings = data?.data?.bookings ?? [];
   const totalPages = data?.data?.total_pages ?? 1;
@@ -48,7 +90,7 @@ export default function Bookings() {
       ) : (
         <div className="p-6 space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Bookings</h1>
+            <h1 className="text-3xl font-bold text-foreground">New Bookings</h1>
             <p className="text-muted-foreground">View and manage all reservations</p>
           </div>
 
@@ -107,11 +149,12 @@ export default function Bookings() {
                       <TableHead>Status</TableHead>
                       <TableHead>Payment</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {bookings.map((booking) => (
-                      <TableRow key={booking.id} className="cursor-pointer hover:bg-accent/50">
+                      <TableRow key={booking.id} className="hover:bg-accent/50">
                         <TableCell className="font-medium">{booking.guestName}</TableCell>
                         <TableCell>{booking.propertyName}</TableCell>
                         <TableCell>{booking.checkIn.toLocaleDateString()}</TableCell>
@@ -132,6 +175,16 @@ export default function Bookings() {
                         </TableCell>
                         <TableCell className="text-right font-semibold">
                           ${booking.totalAmount}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="bg-primary/5 hover:bg-primary hover:text-primary-foreground border-primary/20 transition-all duration-200"
+                            onClick={() => handleOpenDetails(booking)}
+                          >
+                            Details
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -169,6 +222,75 @@ export default function Bookings() {
           </Card>
         </div>
       )}
+
+      {/* Guest Details Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedBooking?.guestName} {selectedBooking?.guestEmail ? `(${selectedBooking.guestEmail})` : ''}
+            </DialogTitle>
+            <DialogDescription>
+              Add or update guest information for reservation {selectedBooking?.id}.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSendWelcome}>
+            <div className="grid gap-4 py-4">
+              {selectedBooking?.guestEmail && (
+                <div className="flex justify-end">
+                  <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100">
+                    Mail exist
+                  </Badge>
+                </div>
+              )}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="guest-name" className="text-right">
+                  Guest
+                </Label>
+                <Input
+                  id="guest-name"
+                  value={selectedBooking?.guestName || ''}
+                  disabled
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email" className="text-right">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter guest email"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                type="submit" 
+                disabled={sendWelcome.isPending || !guestEmail}
+                className="w-full sm:w-auto"
+              >
+                {sendWelcome.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Send Welcome Email
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
