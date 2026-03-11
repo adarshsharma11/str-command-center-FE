@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,8 @@ import {
   Circle,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/dashboardCalculations';
+import { usePropertiesQuery } from '@/lib/api/property';
+import { useBookingsQuery } from '@/lib/api/booking';
 import {
   format,
   addDays,
@@ -57,24 +59,6 @@ import {
   isBefore,
   startOfDay,
 } from 'date-fns';
-
-// Mock properties - TODO: [ADARSH] Replace with actual API call
-const MOCK_PROPERTIES = [
-  { id: '1', name: 'Ocean View Villa', basePrice: 450, bedrooms: 4 },
-  { id: '2', name: 'Mountain Retreat', basePrice: 600, bedrooms: 5 },
-  { id: '3', name: 'Downtown Loft', basePrice: 250, bedrooms: 2 },
-  { id: '4', name: 'Beachfront Condo', basePrice: 350, bedrooms: 3 },
-  { id: '5', name: 'Lakeside Cabin', basePrice: 280, bedrooms: 3 },
-];
-
-// Mock booked dates per property - TODO: [ADARSH] Replace with actual booking data
-const MOCK_BOOKED_DATES: Record<string, string[]> = {
-  '1': ['2026-02-14', '2026-02-15', '2026-02-20', '2026-02-21', '2026-02-22', '2026-03-05', '2026-03-06', '2026-03-07'],
-  '2': ['2026-02-10', '2026-02-11', '2026-02-12', '2026-02-28', '2026-03-01'],
-  '3': ['2026-02-13', '2026-02-14', '2026-02-15', '2026-02-16', '2026-03-10', '2026-03-11'],
-  '4': ['2026-02-09', '2026-02-10', '2026-02-25', '2026-02-26', '2026-02-27'],
-  '5': ['2026-02-17', '2026-02-18', '2026-02-19', '2026-03-02', '2026-03-03'],
-};
 
 // Seasonality configuration (month -> multiplier)
 const SEASONALITY: Record<number, number> = {
@@ -290,10 +274,11 @@ function PricingCalendar({
   currentMonth,
   bookedDates,
 }: {
-  property: typeof MOCK_PROPERTIES[0];
+  property: any;
   currentMonth: Date;
   bookedDates: string[];
 }) {
+
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -315,9 +300,9 @@ function PricingCalendar({
         const dateStr = format(date, 'yyyy-MM-dd');
         const isBooked = bookedDates.includes(dateStr);
         const isPast = isBefore(date, today);
-        const { price } = calculateAIPrice(property.basePrice, date);
-        const diff = price - property.basePrice;
-        const diffPct = Math.round((diff / property.basePrice) * 100);
+        const { price } = calculateAIPrice(200, date);
+        const diff = price - 200;
+        const diffPct = Math.round((diff / 200) * 100);
 
         return (
           <div
@@ -353,31 +338,93 @@ function PricingCalendar({
 }
 
 export default function Pricing() {
-  const [selectedProperty, setSelectedProperty] = useState(MOCK_PROPERTIES[0]);
+  const { data: properties, isLoading: isLoadingProperties } = usePropertiesQuery();
+  const { data: bookings, isLoading: isLoadingBookings } = useBookingsQuery();
+  const propertyList = properties?.data || [];
+  const bookingList = bookings?.data.bookings || [];
+  console.log(bookings, bookingList, 'OOOO', propertyList);
+  
+  const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [config, setConfig] = useState<PricingConfig>(DEFAULT_CONFIG);
   const [autoSync, setAutoSync] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const bookedDates = MOCK_BOOKED_DATES[selectedProperty.id] || [];
+const bookedDates = useMemo(() => {
+  if (!bookings?.data?.bookings || !selectedProperty) return [];
 
-  // Generate next 14 days of pricing
-  const pricingPreview = useMemo(() => {
-    const today = new Date();
-    return Array.from({ length: 14 }, (_, i) => {
-      const date = addDays(today, i);
-      const manual = calculateManualPrice(selectedProperty.basePrice, date, config, bookedDates);
-      const ai = calculateAIPrice(selectedProperty.basePrice, date);
-      return { date, ...manual, aiPrice: ai.price, aiFactors: ai.factors };
+  const dates: string[] = [];
+
+  bookings.data.bookings.forEach((booking: any) => {
+
+    if (Number(booking.property_id) !== Number(selectedProperty.id)) return;
+
+    const start = startOfDay(new Date(booking.check_in_date));
+    const end = startOfDay(new Date(booking.check_out_date));
+
+    const days = eachDayOfInterval({
+      start,
+      end: addDays(end, -1),
     });
-  }, [selectedProperty, config, bookedDates]);
+
+    days.forEach((d) => {
+      dates.push(format(d, "yyyy-MM-dd"));
+    });
+
+  });
+
+  return dates;
+
+}, [bookings, selectedProperty]);
+
+  useEffect(() => {
+  if (propertyList.length && !selectedProperty) {
+    setSelectedProperty(propertyList[0]);
+  }
+}, [propertyList]);
+
+const basePrice = selectedProperty?.basePrice || 250;
+  // Generate next 14 days of pricing
+const pricingPreview = useMemo(() => {
+  if (!selectedProperty) return [];
+
+  const today = new Date();
+
+  return Array.from({ length: 14 }, (_, i) => {
+    const date = addDays(today, i);
+
+    const manual = calculateManualPrice(
+      basePrice,
+      date,
+      config,
+      bookedDates
+    );
+
+    const ai = calculateAIPrice(basePrice, date);
+
+    return {
+      date,
+      ...manual,
+      aiPrice: ai.price,
+      aiFactors: ai.factors,
+    };
+  });
+}, [selectedProperty, config, bookedDates]);
 
   const avgOptimizedPrice = Math.round(
     pricingPreview.reduce((sum, p) => sum + p.price, 0) / pricingPreview.length
   );
 
   const potentialRevenue = avgOptimizedPrice * 30 * 0.75;
-  const baselineRevenue = selectedProperty.basePrice * 30 * 0.75;
+  const baselineRevenue = basePrice * 30 * 0.75;
   const revenueIncrease = ((potentialRevenue - baselineRevenue) / baselineRevenue) * 100;
+
+  if (isLoadingProperties || isLoadingBookings || !selectedProperty) {
+  return (
+    <Layout>
+      <div className="p-6">Loading pricing data...</div>
+    </Layout>
+  );
+}
 
   return (
     <Layout>
@@ -427,7 +474,7 @@ export default function Pricing() {
                   <CardTitle className="text-base">Select Property</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {MOCK_PROPERTIES.map((p) => (
+                  {propertyList && propertyList.map((p) => (
                     <button
                       key={p.id}
                       onClick={() => setSelectedProperty(p)}
@@ -439,7 +486,7 @@ export default function Pricing() {
                     >
                       <div className="font-medium text-sm">{p.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        Base: {formatCurrency(p.basePrice)}/night
+                        Base: {formatCurrency(basePrice)}/night
                       </div>
                     </button>
                   ))}
@@ -557,14 +604,14 @@ export default function Pricing() {
                     <Select
                       value={selectedProperty.id}
                       onValueChange={(id) =>
-                        setSelectedProperty(MOCK_PROPERTIES.find((p) => p.id === id)!)
+                        setSelectedProperty(propertyList.find((p) => p.id === id)!)
                       }
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {MOCK_PROPERTIES.map((p) => (
+                        {propertyList && propertyList.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
                             {p.name} - {formatCurrency(p.basePrice)}/night
                           </SelectItem>
@@ -574,7 +621,7 @@ export default function Pricing() {
                     <div className="mt-4 p-3 bg-muted rounded-lg">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Base Price</span>
-                        <span className="font-medium">{formatCurrency(selectedProperty.basePrice)}</span>
+                        <span className="font-medium">{formatCurrency(basePrice)}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -736,7 +783,7 @@ export default function Pricing() {
                       </div>
                       <p className="text-2xl font-bold mt-2">{formatCurrency(avgOptimizedPrice)}</p>
                       <p className="text-xs text-muted-foreground">
-                        vs {formatCurrency(selectedProperty.basePrice)} base
+                        vs {formatCurrency(basePrice)} base
                       </p>
                     </CardContent>
                   </Card>
@@ -798,10 +845,10 @@ export default function Pricing() {
                       </TableHeader>
                       <TableBody>
                         {pricingPreview.map(({ date, price, factors, aiPrice, isIsland }) => {
-                          const diff = price - selectedProperty.basePrice;
-                          const diffPct = ((diff / selectedProperty.basePrice) * 100).toFixed(0);
-                          const aiDiff = aiPrice - selectedProperty.basePrice;
-                          const aiDiffPct = ((aiDiff / selectedProperty.basePrice) * 100).toFixed(0);
+                          const diff = price - basePrice;
+                          const diffPct = ((diff / basePrice) * 100).toFixed(0);
+                          const aiDiff = aiPrice - basePrice;
+                          const aiDiffPct = ((aiDiff / basePrice) * 100).toFixed(0);
                           return (
                             <TableRow key={date.toISOString()} className={isIsland ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}>
                               <TableCell className="font-medium">
@@ -810,7 +857,7 @@ export default function Pricing() {
                               </TableCell>
                               <TableCell>{format(date, 'EEE')}</TableCell>
                               <TableCell className="text-right text-muted-foreground">
-                                {formatCurrency(selectedProperty.basePrice)}
+                                {formatCurrency(basePrice)}
                               </TableCell>
                               <TableCell className="text-right">
                                 <span className="text-yellow-600">{formatCurrency(aiPrice)}</span>

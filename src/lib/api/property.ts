@@ -4,8 +4,8 @@ import { ENDPOINTS } from '@/lib/api/endpoints';
 import * as yup from 'yup';
 
 type PropertyApiItem = {
-  id: number;
-  name?: string;
+  id: string;
+  name: string;
   address?: string;
   status?: string;
   created_at?: string;
@@ -14,6 +14,8 @@ type PropertyApiItem = {
   vrbo_id?: string;
   booking_id?: string;
   ical_feed_url?: string;
+  basePrice: number | 400;
+  bedrooms: number | 1;
 };
 
 type PropertyListResponse = {
