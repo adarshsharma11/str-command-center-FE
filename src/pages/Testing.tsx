@@ -49,21 +49,14 @@ type LogEntry = {
 };
 
 type ServiceBooking = {
-  id: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  service_name: string;
-  provider_name: string;
-  provider_email: string;
-  guest_name: string;
-  guest_email: string;
-  property_name: string;
-  service_date: string;
-  service_time: string;
-  price: number;
-  email_sent: boolean;
-  email_error?: string;
+  id: number;
   created_at: string;
-  responded_at: string | null;
+  task_id: string;
+  task_type: string;
+  response: 'accepted' | 'rejected' | 'pending';
+  task_name: string | null;
+  person_name: string | null;
+  task_date_time: string | null;
 };
 
 // ============================================================
@@ -85,8 +78,8 @@ const BOOKING_SOURCES = [
 
 export default function Testing() {
   const [booking, setBooking] = useState<TestBooking>({
-    bookingSource: 'airbnb',
-    propertyId: 'prop-1',
+    bookingSource: '',
+    propertyId: '',
     checkInDate: new Date().toISOString().split('T')[0],
     checkOutDate: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
     guestEmail: '',
@@ -110,12 +103,9 @@ export default function Testing() {
   // ── Poll for booking status updates ───────────────────
   const pollBookings = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/service-bookings');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setRecentBookings(data.data);
-        }
+      const res = await apiClient.get<{ success: boolean; data: ServiceBooking[] }>(ENDPOINTS.SERVICE_BOOKINGS.RESPONSES);
+      if (res.success) {
+        setRecentBookings(res.data);
       }
     } catch {
       // Server might not be running yet
@@ -189,6 +179,15 @@ export default function Testing() {
   };
 
   const handleTestCreateBooking = async () => {
+    if (!booking.bookingSource) {
+      toast.error('Please select a booking source');
+      return;
+    }
+    if (!booking.propertyId) {
+      toast.error('Please select a property');
+      return;
+    }
+
     setIsCreatingBooking(true);
     setLogs([]); // Clear logs for new test
 
@@ -327,8 +326,8 @@ export default function Testing() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (response: string) => {
+    switch (response) {
       case 'accepted': return <Badge className="bg-green-500/10 text-green-700 border-green-200">Accepted</Badge>;
       case 'rejected': return <Badge className="bg-red-500/10 text-red-700 border-red-200">Rejected</Badge>;
       default: return <Badge className="bg-yellow-500/10 text-yellow-700 border-yellow-200">Pending</Badge>;
@@ -364,7 +363,7 @@ export default function Testing() {
                 <div className="space-y-2">
                   <Label>Booking Source</Label>
                   <Select value={booking.bookingSource} onValueChange={(v) => updateBooking('bookingSource', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger>
                     <SelectContent>
                       {BOOKING_SOURCES.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                     </SelectContent>
@@ -373,7 +372,7 @@ export default function Testing() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Home className="h-4 w-4" />Property</Label>
                   <Select value={booking.propertyId} onValueChange={(v) => updateBooking('propertyId', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
                     <SelectContent>
                       {properties.length > 0 ? (
                         properties.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)
@@ -570,21 +569,19 @@ export default function Testing() {
                     {recentBookings.map((sb) => (
                       <div key={sb.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
                         <div className="space-y-1">
-                          <p className="text-sm font-medium">{sb.service_name}</p>
+                          <p className="text-sm font-medium">{sb.task_name || 'N/A'}</p>
                           <p className="text-xs text-muted-foreground">
-                            Provider: {sb.provider_name || sb.provider_email} · Guest: {sb.guest_name}
+                            Provider: {sb.person_name || 'N/A'} · Task ID: {sb.task_id}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {sb.property_name} · {new Date(sb.service_date).toLocaleDateString()} at {sb.service_time}
+                            {sb.task_date_time ? new Date(sb.task_date_time).toLocaleString() : 'N/A'}
                           </p>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                          {getStatusBadge(sb.status)}
-                          {sb.responded_at && (
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(sb.responded_at).toLocaleTimeString()}
-                            </span>
-                          )}
+                          {getStatusBadge(sb.response)}
+                          <span className="text-xs text-muted-foreground">
+                            Received: {new Date(sb.created_at).toLocaleTimeString()}
+                          </span>
                         </div>
                       </div>
                     ))}
