@@ -10,24 +10,25 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Calendar, Clock, User, Home, Mail, Phone, Plus, Trash2, Send, CheckCircle2, AlertCircle, Loader2, RefreshCw, DollarSign } from 'lucide-react';
 import { useAllPropertiesQuery } from '@/lib/api/property';
+import { fetchServiceCategories, useServiceCategoriesQuery, type ServiceCategory } from '@/lib/api/service-category';
+import { apiClient } from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
+import { env } from '@/config/env';
+import { getToken } from '@/lib/auth/token';
 
 // ============================================================
 // TYPES
 // ============================================================
-type ServiceEntry = {
+type AdditionalService = {
   id: string;
-  service_name: string;
-  service_date: string;
+  serviceType: string;
+  date: string;
   time: string;
-  provider_name: string;
-  provider_email: string;
-  price: string;
 };
 
 type TestBooking = {
   bookingSource: string;
   propertyId: string;
-  propertyName: string;
   checkInDate: string;
   checkOutDate: string;
   guestEmail: string;
@@ -35,13 +36,13 @@ type TestBooking = {
   guestName: string;
   totalAmount: string;
   numberOfGuests: string;
-  services: ServiceEntry[];
+  additionalServices: AdditionalService[];
 };
 
 type LogEntry = {
   id: string;
   timestamp: Date;
-  type: 'email-provider' | 'email-guest' | 'booking-created' | 'system' | 'status-update';
+  type: 'calendar' | 'guest-message' | 'crew-message' | 'service-message' | 'database' | 'system';
   status: 'success' | 'pending' | 'error';
   message: string;
   details?: string;
@@ -82,22 +83,10 @@ const BOOKING_SOURCES = [
   { id: 'direct', name: 'Direct Booking' },
 ];
 
-const SAMPLE_SERVICES = [
-  'Private Chef',
-  'Spa & Massage',
-  'Yacht Charter',
-  'Airport Transfer',
-  'Photography Session',
-  'Guided Tour',
-  'Bartender',
-  'Concierge',
-];
-
 export default function Testing() {
   const [booking, setBooking] = useState<TestBooking>({
     bookingSource: 'airbnb',
     propertyId: 'prop-1',
-    propertyName: 'Ocean View Villa',
     checkInDate: new Date().toISOString().split('T')[0],
     checkOutDate: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
     guestEmail: '',
@@ -105,13 +94,18 @@ export default function Testing() {
     guestName: '',
     totalAmount: '1500',
     numberOfGuests: '4',
-    services: [],
+    additionalServices: [],
   });
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [recentBookings, setRecentBookings] = useState<ServiceBooking[]>([]);
   const [isPolling, setIsPolling] = useState(false);
+
+  // API Test State
+  const [fetchedCategories, setFetchedCategories] = useState<ServiceCategory[] | null>(null);
+  const [isFetchingCategories, setIsFetchingCategories] = useState(false);
+  const [bookingTestResult, setBookingTestResult] = useState<unknown>(null);
+  const [isCreatingBooking, setIsCreatingBooking] = useState(false);
 
   // ── Poll for booking status updates ───────────────────
   const pollBookings = useCallback(async () => {
@@ -131,6 +125,10 @@ export default function Testing() {
   const { data: propertiesData, isLoading: isLoadingProperties } = useAllPropertiesQuery();
   const properties = (Array.isArray(propertiesData?.data) ? propertiesData.data : []) || [];
 
+  // Fetch service categories for service selection
+  const { data: serviceCategoriesData, isLoading: isLoadingServiceCategories } = useServiceCategoriesQuery();
+  const serviceCategories = serviceCategoriesData?.data || [];
+
   useEffect(() => {
     pollBookings();
     const interval = setInterval(pollBookings, 5000); // Poll every 5 seconds
@@ -139,42 +137,33 @@ export default function Testing() {
 
   // ── Form handlers ─────────────────────────────────────
   const updateBooking = (field: keyof TestBooking, value: string) => {
-    setBooking(prev => {
-      const updated = { ...prev, [field]: value };
-      if (field === 'propertyId') {
-        const prop = MOCK_PROPERTIES.find(p => p.id === value);
-        if (prop) updated.propertyName = prop.name;
-      }
-      return updated;
-    });
+    setBooking(prev => ({ ...prev, [field]: value }));
   };
 
   const addService = () => {
+    const newService: AdditionalService = {
+      id: `service-${Date.now()}`,
+      serviceType: '',
+      date: booking.checkInDate,
+      time: '10:00',
+    };
     setBooking(prev => ({
       ...prev,
-      services: [...prev.services, {
-        id: `svc-${Date.now()}`,
-        service_name: '',
-        service_date: prev.checkInDate,
-        time: '10:00',
-        provider_name: '',
-        provider_email: '',
-        price: '',
-      }],
+      additionalServices: [...prev.additionalServices, newService],
     }));
   };
 
-  const updateService = (id: string, field: keyof ServiceEntry, value: string) => {
+  const updateService = (id: string, field: keyof AdditionalService, value: string) => {
     setBooking(prev => ({
       ...prev,
-      services: prev.services.map(s => s.id === id ? { ...s, [field]: value } : s),
+      additionalServices: prev.additionalServices.map(s => s.id === id ? { ...s, [field]: value } : s),
     }));
   };
 
   const removeService = (id: string) => {
     setBooking(prev => ({
       ...prev,
-      services: prev.services.filter(s => s.id !== id),
+      additionalServices: prev.additionalServices.filter(s => s.id !== id),
     }));
   };
 
@@ -182,108 +171,140 @@ export default function Testing() {
     setLogs(prev => [...prev, { ...log, id: `log-${Date.now()}-${Math.random()}`, timestamp: new Date() }]);
   };
 
-  // ── Submit booking & send emails ──────────────────────
-  const handleSubmit = async () => {
-    if (!booking.guestName) {
-      toast.error('Please enter a guest name');
-      return;
+  const handleTestFetchCategories = async () => {
+    setIsFetchingCategories(true);
+    try {
+      const res = await fetchServiceCategories();
+      if (res.success) {
+        setFetchedCategories(res.data);
+        toast.success(`Fetched ${res.data.length} categories`);
+      } else {
+        toast.error(res.message || 'Failed to fetch');
+      }
+    } catch (err) {
+      toast.error('Error fetching categories');
+    } finally {
+      setIsFetchingCategories(false);
     }
-    if (booking.services.length === 0) {
-      toast.error('Please add at least one service');
-      return;
-    }
-    const servicesWithoutProvider = booking.services.filter(s => !s.provider_email);
-    if (servicesWithoutProvider.length > 0) {
-      toast.error('Please enter provider email for all services');
-      return;
-    }
+  };
 
-    setIsSubmitting(true);
-    setLogs([]);
+  const handleTestCreateBooking = async () => {
+    setIsCreatingBooking(true);
+    setLogs([]); // Clear logs for new test
 
-    addLog({ type: 'system', status: 'pending', message: 'Initiating service booking workflow...' });
+    // Get property name
+    const propertyName = properties.find(p => String(p.id) === booking.propertyId)?.name || 
+                        MOCK_PROPERTIES.find(p => p.id === booking.propertyId)?.name || 
+                        'Test Property';
+
+    // Map services from the form
+    const services = booking.additionalServices.map(s => ({
+      service_id: parseInt(s.serviceType) || 1, // Fallback to 1 if not a valid number, as API expects number
+      service_date: s.date ? `${s.date}T${s.time || '09:00'}:00` : "2024-01-02T09:00:00",
+      time: s.time || "09:00"
+    }));
+
+    // Construct payload using form data, falling back to defaults if empty
+    const payload = { 
+      "reservation_id": String(Date.now()), 
+      "platform": booking.bookingSource || "airbnb", 
+      "guest_name": booking.guestName || "Test Guest", 
+      "check_in_date": booking.checkInDate ? `${booking.checkInDate}T14:00:00` : "2024-01-01T14:00:00", 
+      "check_out_date": booking.checkOutDate ? `${booking.checkOutDate}T11:00:00` : "2024-01-05T11:00:00", 
+      "services": services.length > 0 ? services : [ 
+        { 
+          "service_id": 1, 
+          "service_date": "2024-01-02T09:00:00", 
+          "time": "09:00" 
+        } 
+      ], 
+      "guest_phone": booking.guestPhone || "123-456-7890", 
+      "guest_email": booking.guestEmail || "test@example.com", 
+      "property_id": booking.propertyId || "prop-123", 
+      "property_name": propertyName, 
+      "number_of_guests": parseInt(booking.numberOfGuests) || 2, 
+      "total_amount": parseFloat(booking.totalAmount) || 100.0, 
+      "currency": "USD" 
+    };
+
+    const mapStepToType = (step: string): LogEntry['type'] => {
+      switch (step) {
+        case 'database': return 'database';
+        case 'calendar': return 'calendar';
+        case 'guest_notification': return 'guest-message';
+        case 'crew_notification': return 'crew-message';
+        case 'services': return 'service-message';
+        case 'complete': return 'system';
+        default: return 'system';
+      }
+    };
 
     try {
-      const payload = {
-        guest_name: booking.guestName,
-        guest_email: booking.guestEmail,
-        guest_phone: booking.guestPhone,
-        property_name: booking.propertyName,
-        property_id: booking.propertyId,
-        check_in_date: `${booking.checkInDate}T14:00:00`,
-        check_out_date: `${booking.checkOutDate}T11:00:00`,
-        number_of_guests: parseInt(booking.numberOfGuests) || 2,
-        total_amount: parseFloat(booking.totalAmount) || 0,
-        currency: 'USD',
-        services: booking.services.map(s => ({
-          service_name: s.service_name,
-          service_date: `${s.service_date}T${s.time}:00`,
-          time: s.time,
-          provider_name: s.provider_name,
-          provider_email: s.provider_email,
-          price: parseFloat(s.price) || 0,
-        })),
-      };
-
-      addLog({ type: 'booking-created', status: 'pending', message: 'Sending booking to server...', details: `${booking.services.length} service(s) for ${booking.guestName}` });
-
-      const res = await fetch('/api/v1/service-booking', {
+      const token = getToken();
+      const response = await fetch(`${env.apiBaseUrl}${ENDPOINTS.BOOKING.LIST}?stream=true`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Server error');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        setBookingTestResult(errorData);
+        throw new Error(errorData.detail?.message || errorData.message || `HTTP error! status: ${response.status}`);
       }
 
-      addLog({ type: 'booking-created', status: 'success', message: `${data.data.length} service booking(s) created` });
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Response body is not readable');
 
-      for (const result of data.data) {
-        if (result.email_sent) {
-          addLog({
-            type: 'email-provider',
-            status: 'success',
-            message: `Email sent to ${result.provider_name} (${result.provider_email})`,
-            details: `Service: ${result.service_name} — Booking ID: ${result.id}`,
-          });
-        } else {
-          addLog({
-            type: 'email-provider',
-            status: 'error',
-            message: `Failed to email ${result.provider_email}`,
-            details: result.email_error || 'Unknown error',
-          });
-        }
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-        if (booking.guestEmail) {
-          addLog({
-            type: 'email-guest',
-            status: 'success',
-            message: `Confirmation email sent to guest: ${booking.guestEmail}`,
-            details: `Service: ${result.service_name}`,
-          });
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        // Keep the last partial line in the buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            
+            // Map API response to LogEntry
+            const logEntry: LogEntry = {
+              id: `log-${Date.now()}-${Math.random()}`,
+              timestamp: new Date(),
+              type: mapStepToType(data.step),
+              status: data.status === 'completed' || data.status === 'success' ? 'success' : 'error',
+              message: data.message || `Step ${data.step} ${data.status}`,
+              details: data.step === 'complete' ? undefined : JSON.stringify(data, null, 2)
+            };
+
+            setLogs(prev => [...prev, logEntry]);
+            
+            // If complete, set the final result
+            if (data.step === 'complete') {
+              setBookingTestResult(data);
+              toast.success('Test booking completed successfully');
+            }
+          } catch (e) {
+            console.error('Error parsing JSON line:', line, e);
+          }
         }
       }
-
-      addLog({
-        type: 'system',
-        status: 'success',
-        message: 'Workflow complete! Waiting for provider responses...',
-        details: 'Providers will receive an email with Accept/Reject buttons. Check the status panel below.',
-      });
-
-      toast.success('Service booking emails sent! Check your inbox.');
-      pollBookings();
-
+      
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      addLog({ type: 'system', status: 'error', message: `Error: ${message}` });
-      toast.error(`Failed: ${message}`);
+      toast.error('Error creating test booking');
+      setBookingTestResult({ error: err instanceof Error ? err.message : 'Unknown error' });
     } finally {
-      setIsSubmitting(false);
+      setIsCreatingBooking(false);
     }
   };
 
@@ -296,10 +317,11 @@ export default function Testing() {
 
   const getLogTypeLabel = (type: LogEntry['type']) => {
     switch (type) {
-      case 'email-provider': return 'Provider Email';
-      case 'email-guest': return 'Guest Email';
-      case 'booking-created': return 'Booking';
-      case 'status-update': return 'Status';
+      case 'calendar': return 'Calendar';
+      case 'guest-message': return 'Guest Comm';
+      case 'crew-message': return 'Crew Comm';
+      case 'service-message': return 'Service Provider';
+      case 'database': return 'Database';
       case 'system': return 'System';
       default: return type;
     }
@@ -353,7 +375,11 @@ export default function Testing() {
                   <Select value={booking.propertyId} onValueChange={(v) => updateBooking('propertyId', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {MOCK_PROPERTIES.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                      {properties.length > 0 ? (
+                        properties.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)
+                      ) : (
+                        MOCK_PROPERTIES.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -404,19 +430,19 @@ export default function Testing() {
               {/* ── SERVICES ──────────────────────────── */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">Services (with Provider Info)</Label>
+                  <Label className="text-base font-semibold">Additional Services</Label>
                   <Button variant="outline" size="sm" onClick={addService}>
                     <Plus className="h-4 w-4 mr-1" /> Add Service
                   </Button>
                 </div>
 
-                {booking.services.length === 0 && (
+                {booking.additionalServices.length === 0 && (
                   <p className="text-sm text-muted-foreground italic">
-                    Add services with provider emails. Each provider will receive a booking request email.
+                    No additional services added. Click "Add Service" to include extras.
                   </p>
                 )}
 
-                {booking.services.map((service, index) => (
+                {booking.additionalServices.map((service, index) => (
                   <Card key={service.id} className="bg-muted/50">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
@@ -426,43 +452,38 @@ export default function Testing() {
                         </Button>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label>Service Type *</Label>
-                          <Select value={service.service_name} onValueChange={(v) => updateService(service.id, 'service_name', v)}>
-                            <SelectTrigger><SelectValue placeholder="Select service" /></SelectTrigger>
-                            <SelectContent>
-                              {SAMPLE_SERVICES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Price (USD)</Label>
-                          <Input type="number" min="0" value={service.price} onChange={(e) => updateService(service.id, 'price', e.target.value)} placeholder="500" />
-                        </div>
+                      <div className="space-y-2">
+                        <Label>Service Type *</Label>
+                        <Select value={service.serviceType} onValueChange={(v) => updateService(service.id, 'serviceType', v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={isLoadingServiceCategories ? "Loading services..." : "Select service"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {isLoadingServiceCategories ? (
+                              <SelectItem value="" disabled>Loading services...</SelectItem>
+                            ) : serviceCategories.length > 0 ? (
+                              serviceCategories.map(category => (
+                                <SelectItem key={category.id} value={String(category.id)}>
+                                  {category.category_name} 
+                                  {category.time && ` (${category.time})`}
+                                  {category.price && ` - $${category.price}`}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="" disabled>No services available</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <Label>Service Date</Label>
-                          <Input type="date" value={service.service_date} onChange={(e) => updateService(service.id, 'service_date', e.target.value)} />
+                          <Label>Date</Label>
+                          <Input type="date" value={service.date} onChange={(e) => updateService(service.id, 'date', e.target.value)} />
                         </div>
                         <div className="space-y-2">
                           <Label>Time</Label>
                           <Input type="time" value={service.time} onChange={(e) => updateService(service.id, 'time', e.target.value)} />
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label>Provider Name</Label>
-                          <Input value={service.provider_name} onChange={(e) => updateService(service.id, 'provider_name', e.target.value)} placeholder="Chef Marco" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="flex items-center gap-2"><Mail className="h-3 w-3" />Provider Email *</Label>
-                          <Input type="email" value={service.provider_email} onChange={(e) => updateService(service.id, 'provider_email', e.target.value)} placeholder="provider@email.com" />
                         </div>
                       </div>
                     </CardContent>
@@ -472,8 +493,8 @@ export default function Testing() {
 
               <Separator />
 
-              <Button className="w-full" size="lg" onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? (
+              <Button className="w-full" size="lg" onClick={handleTestCreateBooking} disabled={isCreatingBooking}>
+                {isCreatingBooking ? (
                   <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending Emails...</>
                 ) : (
                   <><Send className="h-4 w-4 mr-2" /> Book Services & Send Emails</>
