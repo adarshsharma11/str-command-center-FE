@@ -12,8 +12,22 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Link2, ExternalLink, Copy, Check } from 'lucide-react';
 import { PropertiesPageSkeleton } from '@/components/skeletons/PropertiesListSkeleton';
-import { usePropertiesQuery, propertyMappers, useCreatePropertyMutation, createPropertySchema, type PropertyView, type PropertyListingView, type CreatePropertyFormData } from '@/lib/api/property';
+import { usePropertiesQuery, propertyMappers, useCreatePropertyMutation, createPropertySchema, type PropertyView, type PropertyListingView } from '@/lib/api/property';
 import { useToast } from '@/components/ui/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { fetchOwners } from '@/lib/api/reports';
+
+type CreatePropertyFormData = {
+  name: string;
+  address: string;
+  status: 'active' | 'inactive' | 'maintenance';
+  bedrooms: number;
+  base_price: number;
+  owner_id?: number | null;
+  airbnb_id?: string;
+  vrbo_id?: string;
+  booking_id?: string;
+};
 
 export default function Properties() {
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
@@ -27,18 +41,30 @@ export default function Properties() {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CreatePropertyFormData>({
-    resolver: yupResolver(createPropertySchema),
+    resolver: yupResolver(createPropertySchema) as unknown as any,
     defaultValues: {
       name: '',
       address: '',
       status: 'active',
+      bedrooms: 0,
+      base_price: 0,
+      owner_id: null,
       airbnb_id: '',
       vrbo_id: '',
       booking_id: '',
     },
   });
+
+  // Fetch owners for the selection dropdown
+  const { data: ownersData } = useQuery({
+    queryKey: ['owners'],
+    queryFn: fetchOwners,
+    staleTime: 5 * 60_000,
+  });
+  const owners = ownersData?.data ?? [];
 
   const createPropertyMutation = useCreatePropertyMutation({
     onSuccess: () => {
@@ -76,11 +102,14 @@ export default function Properties() {
     Maintenance: 'bg-orange-500 text-white',
   };
 
-  const onSubmit = (data: CreatePropertyFormData) => {
+  const onSubmit = (data: any) => {
     createPropertyMutation.mutate({
       name: data.name,
       address: data.address,
       status: data.status,
+      bedrooms: data.bedrooms,
+      base_price: data.base_price,
+      owner_id: data.owner_id || undefined,
       airbnb_id: data.airbnb_id || undefined,
       vrbo_id: data.vrbo_id || undefined,
       booking_id: data.booking_id || undefined,
@@ -170,6 +199,34 @@ export default function Properties() {
                         <p className="text-sm text-destructive">{errors.address.message}</p>
                       )}
                     </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="bedrooms">Rooms</Label>
+                        <Input 
+                          id="bedrooms" 
+                          type="number"
+                          placeholder="Number of rooms" 
+                          {...register('bedrooms', { valueAsNumber: true })}
+                          className={errors.bedrooms ? 'border-destructive' : ''}
+                        />
+                        {errors.bedrooms && (
+                          <p className="text-sm text-destructive">{errors.bedrooms.message}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="base_price">Base Price ($)</Label>
+                        <Input 
+                          id="base_price" 
+                          type="number"
+                          placeholder="Base price per night" 
+                          {...register('base_price', { valueAsNumber: true })}
+                          className={errors.base_price ? 'border-destructive' : ''}
+                        />
+                        {errors.base_price && (
+                          <p className="text-sm text-destructive">{errors.base_price.message}</p>
+                        )}
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="status">Status</Label>
                       <Select 
@@ -187,6 +244,27 @@ export default function Properties() {
                       </Select>
                       {errors.status && (
                         <p className="text-sm text-destructive">{errors.status.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="owner_id">Owner</Label>
+                      <Select 
+                        onValueChange={(value) => setValue('owner_id', parseInt(value))}
+                      >
+                        <SelectTrigger id="owner_id" className={errors.owner_id ? 'border-destructive' : ''}>
+                          <SelectValue placeholder="Select owner (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">None</SelectItem>
+                          {owners.map((owner) => (
+                            <SelectItem key={owner.id} value={String(owner.id)}>
+                              {owner.first_name} {owner.last_name} ({owner.email})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.owner_id && (
+                        <p className="text-sm text-destructive">{errors.owner_id.message}</p>
                       )}
                     </div>
                     <div className="space-y-3">
@@ -268,7 +346,18 @@ export default function Properties() {
                         {property.internalStatus}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{property.address}</p>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm text-muted-foreground">{property.address}</p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
+                        <span className="flex items-center gap-1">
+                          Rooms: {property.bedrooms}
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          Base Price: ${property.basePrice}
+                        </span>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>

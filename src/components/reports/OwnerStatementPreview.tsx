@@ -31,12 +31,6 @@ const MOCK_SERVICES_BY_PROPERTY: Record<string, { name: string; revenue: number;
 };
 
 export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
-  // Calculate total services revenue
-  const totalServicesRevenue = data.properties.reduce((sum, p) => {
-    const services = MOCK_SERVICES_BY_PROPERTY[p.property_id] || [];
-    return sum + services.reduce((s, svc) => s + svc.revenue, 0);
-  }, 0);
-
   return (
     <div className="space-y-6">
       {/* Statement Header */}
@@ -66,7 +60,7 @@ export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
                 <p className="text-lg font-bold text-green-600">
-                  {formatCurrency(data.total_revenue + totalServicesRevenue)}
+                  {formatCurrency(data.total_revenue)}
                 </p>
               </div>
               <div className="text-right">
@@ -86,7 +80,7 @@ export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
               <TrendingUp className="h-4 w-4 text-green-500" />
               <span className="text-sm text-muted-foreground">Rental Revenue</span>
             </div>
-            <p className="text-2xl font-bold mt-2">{formatCurrency(data.total_revenue)}</p>
+            <p className="text-2xl font-bold mt-2">{formatCurrency(data.rental_revenue)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -95,7 +89,7 @@ export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
               <Sparkles className="h-4 w-4 text-purple-500" />
               <span className="text-sm text-muted-foreground">Services</span>
             </div>
-            <p className="text-2xl font-bold mt-2">{formatCurrency(totalServicesRevenue)}</p>
+            <p className="text-2xl font-bold mt-2">{formatCurrency(data.services_revenue)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -122,9 +116,6 @@ export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
 
       {/* Property Breakdown */}
       {data.properties.map((property) => {
-        const services = MOCK_SERVICES_BY_PROPERTY[property.property_id] || [];
-        const servicesTotal = services.reduce((sum, s) => sum + s.revenue, 0);
-
         return (
           <Card key={property.property_id}>
             <CardHeader className="pb-3">
@@ -139,7 +130,7 @@ export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Net Revenue</p>
                   <p className="text-lg font-semibold">
-                    {formatCurrency(property.net_revenue + servicesTotal)}
+                    {formatCurrency(property.net_revenue)}
                   </p>
                 </div>
               </div>
@@ -165,8 +156,8 @@ export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Guest</TableHead>
-                    <TableHead>Dates</TableHead>
+                    <TableHead>Guest / Service</TableHead>
+                    <TableHead>Dates / Details</TableHead>
                     <TableHead className="text-center">Nights</TableHead>
                     <TableHead>Channel</TableHead>
                     <TableHead className="text-right">Revenue</TableHead>
@@ -191,8 +182,8 @@ export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {/* Services rows integrated into bookings table */}
-                  {services.map((service, idx) => (
+                  {/* Dynamic Services rows from API */}
+                  {property.services_summary?.map((service, idx) => (
                     <TableRow key={`service-${idx}`} className="bg-purple-50/50 dark:bg-purple-900/10">
                       <TableCell className="font-medium">
                         <span className="flex items-center gap-1.5">
@@ -201,7 +192,7 @@ export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
                         </span>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {service.bookings} booking{service.bookings > 1 ? 's' : ''}
+                        {service.count} booking{service.count > 1 ? 's' : ''}
                       </TableCell>
                       <TableCell className="text-center">-</TableCell>
                       <TableCell>
@@ -224,13 +215,13 @@ export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Rental Revenue</span>
-                    <span className="font-medium">{formatCurrency(property.total_revenue)}</span>
+                    <span className="font-medium">{formatCurrency(property.rental_revenue)}</span>
                   </div>
-                  {servicesTotal > 0 && (
+                  {property.services_revenue > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Services Revenue</span>
                       <span className="font-medium text-purple-600">
-                        {formatCurrency(servicesTotal)}
+                        {formatCurrency(property.services_revenue)}
                       </span>
                     </div>
                   )}

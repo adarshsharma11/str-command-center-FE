@@ -22,6 +22,8 @@ export interface OwnerStatementData {
   period_start: string;
   period_end: string;
   properties: OwnerPropertyStatement[];
+  rental_revenue: number;
+  services_revenue: number;
   total_revenue: number;
   total_expenses: number;
   total_payout: number;
@@ -35,6 +37,8 @@ export interface OwnerPropertyStatement {
   property_address: string;
   bookings: OwnerBookingItem[];
   total_revenue: number;
+  rental_revenue: number;
+  services_revenue: number;
   channel_fees: number;
   cleaning_fees_collected: number;
   cleaning_expenses: number;
@@ -44,6 +48,7 @@ export interface OwnerPropertyStatement {
   occupancy_rate: number;
   nights_booked: number;
   average_daily_rate: number;
+  services_summary?: { name: string; count: number; revenue: number }[];
 }
 
 export interface OwnerBookingItem {
@@ -53,6 +58,8 @@ export interface OwnerBookingItem {
   check_out: string;
   nights: number;
   revenue: number;
+  services_revenue?: number;
+  services?: { service_id: string; service_name: string; price: number }[];
   channel: string;
   channel_fee: number;
   cleaning_fee: number;

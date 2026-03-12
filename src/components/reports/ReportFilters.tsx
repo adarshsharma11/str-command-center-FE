@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ArrowLeft, CalendarIcon, Download, Mail, Clock, Filter, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,9 @@ import { toast } from 'sonner';
 import { downloadReportPDF } from '@/lib/utils/pdfDownload';
 import type { ReportType, ReportFilters as ReportFiltersType } from '@/types/reports';
 import type { UseDateRangeFilterReturn, DateRangePreset } from '@/hooks/useDateRangeFilter';
+import { usePropertiesQuery, propertyMappers } from '@/lib/api/property';
+import { useQuery } from '@tanstack/react-query';
+import { fetchOwners } from '@/lib/api/reports';
 
 interface ReportFiltersProps {
   reportType: ReportType;
@@ -27,22 +30,6 @@ interface ReportFiltersProps {
   onEmail: () => void;
   filters: ReportFiltersType;
 }
-
-// TODO: [ADARSH] Replace with actual API call to fetch properties
-const MOCK_PROPERTIES = [
-  { id: '1', name: 'Ocean View Villa' },
-  { id: '2', name: 'Mountain Retreat' },
-  { id: '3', name: 'Downtown Loft' },
-  { id: '4', name: 'Beachfront Condo' },
-  { id: '5', name: 'Lakeside Cabin' },
-];
-
-// TODO: [ADARSH] Replace with actual API call to fetch owners
-const MOCK_OWNERS = [
-  { id: 'owner-1', name: 'Robert Williams' },
-  { id: 'owner-2', name: 'Sarah Johnson' },
-  { id: 'owner-3', name: 'Michael Chen' },
-];
 
 const REPORT_TITLES: Record<ReportType, string> = {
   'owner-statement': 'Owner Statement',
@@ -67,6 +54,21 @@ export function ReportFilters({
 }: ReportFiltersProps) {
   const { dateRange, preset, setPreset, setDateRange, presets } = dateFilter;
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Fetch actual properties from API
+  const { data: propertiesData, isLoading: isLoadingProperties } = usePropertiesQuery(1, 100);
+  const properties = useMemo(() => 
+    (propertiesData?.data ?? []).map(propertyMappers.toViewProperty),
+    [propertiesData]
+  );
+
+  // Fetch owners from API
+  const { data: ownersData, isLoading: isLoadingOwners } = useQuery({
+    queryKey: ['owners'],
+    queryFn: fetchOwners,
+    staleTime: 5 * 60_000,
+  });
+  const owners = ownersData?.data ?? [];
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -98,7 +100,7 @@ export function ReportFilters({
   };
 
   const showPropertyFilter = ['owner-statement', 'booking-summary', 'occupancy'].includes(reportType);
-  const showOwnerFilter = reportType === 'owner-statement';
+  const showOwnerFilter = ['owner-statement'].includes(reportType);
 
   return (
     <Card>
@@ -192,6 +194,51 @@ export function ReportFilters({
           </Popover>
         </div>
 
+        {/* Owner Filter */}
+        {showOwnerFilter && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Label className="text-sm font-medium">Owners</Label>
+              {selectedOwnerIds.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {selectedOwnerIds.length} selected
+                </Badge>
+              )}
+              {selectedOwnerIds.length === 0 && (
+                <span className="text-xs text-muted-foreground">All owners</span>
+              )}
+            </div>
+            {isLoadingOwners ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading owners...
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {owners.map((owner) => (
+                  <label
+                    key={owner.id}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors',
+                      selectedOwnerIds.includes(String(owner.id))
+                        ? 'border-primary bg-primary/10'
+                        : 'border-muted hover:border-primary/50'
+                    )}
+                  >
+                    <Checkbox
+                      checked={selectedOwnerIds.includes(String(owner.id))}
+                      onCheckedChange={() => toggleOwner(String(owner.id))}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="text-sm">{owner.first_name} {owner.last_name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Property Filter */}
         {showPropertyFilter && (
           <div className="space-y-3">
@@ -207,64 +254,33 @@ export function ReportFilters({
                 <span className="text-xs text-muted-foreground">All properties</span>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {MOCK_PROPERTIES.map((property) => (
-                <label
-                  key={property.id}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors',
-                    selectedPropertyIds.includes(property.id)
-                      ? 'border-primary bg-primary/10'
-                      : 'border-muted hover:border-primary/50'
-                  )}
-                >
-                  <Checkbox
-                    checked={selectedPropertyIds.includes(property.id)}
-                    onCheckedChange={() => toggleProperty(property.id)}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-sm">{property.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Owner Filter */}
-        {showOwnerFilter && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Label className="text-sm font-medium">Property Owners</Label>
-              {selectedOwnerIds.length > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {selectedOwnerIds.length} selected
-                </Badge>
-              )}
-              {selectedOwnerIds.length === 0 && (
-                <span className="text-xs text-muted-foreground">All owners</span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {MOCK_OWNERS.map((owner) => (
-                <label
-                  key={owner.id}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors',
-                    selectedOwnerIds.includes(owner.id)
-                      ? 'border-primary bg-primary/10'
-                      : 'border-muted hover:border-primary/50'
-                  )}
-                >
-                  <Checkbox
-                    checked={selectedOwnerIds.includes(owner.id)}
-                    onCheckedChange={() => toggleOwner(owner.id)}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-sm">{owner.name}</span>
-                </label>
-              ))}
-            </div>
+            {isLoadingProperties ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading properties...
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {properties.map((property) => (
+                  <label
+                    key={property.id}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors',
+                      selectedPropertyIds.includes(property.id)
+                        ? 'border-primary bg-primary/10'
+                        : 'border-muted hover:border-primary/50'
+                    )}
+                  >
+                    <Checkbox
+                      checked={selectedPropertyIds.includes(property.id)}
+                      onCheckedChange={() => toggleProperty(property.id)}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="text-sm">{property.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </CardContent>

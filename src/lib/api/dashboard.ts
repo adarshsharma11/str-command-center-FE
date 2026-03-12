@@ -241,21 +241,14 @@ export async function fetchDashboardMetrics(): Promise<DashboardResponse> {
 
 /**
  * Fetch extended dashboard metrics with all new analytics
- * TODO: [ADARSH] Connect to backend API at GET /api/v1/dashboard/extended
- * Query params: from (date), to (date) for filtering the date range
  */
 export async function fetchDashboardExtended(params?: { from?: string; to?: string }): Promise<DashboardExtendedResponse> {
-  // TODO: [ADARSH] Replace mock with actual API call:
-  // const queryString = params ? `?from=${params.from}&to=${params.to}` : '';
-  // return apiClient.get<DashboardExtendedResponse>(`${ENDPOINTS.DASHBOARD.EXTENDED}${queryString}`);
-
-  // Mock implementation for development
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-  return {
-    success: true,
-    message: 'Dashboard data retrieved successfully',
-    data: MOCK_EXTENDED_DATA,
-  };
+  const queryParams = new URLSearchParams();
+  if (params?.from) queryParams.append('from', params.from);
+  if (params?.to) queryParams.append('to', params.to);
+  
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+  return apiClient.get<DashboardExtendedResponse>(`${ENDPOINTS.DASHBOARD.EXTENDED}${queryString}`);
 }
 
 // --- Hooks ---

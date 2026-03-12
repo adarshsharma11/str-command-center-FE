@@ -14,8 +14,9 @@ type PropertyApiItem = {
   vrbo_id?: string;
   booking_id?: string;
   ical_feed_url?: string;
-  basePrice: number | 400;
-  bedrooms: number | 1;
+  base_price?: number;
+  bedrooms?: number;
+  owner_id?: number;
 };
 
 type PropertyListResponse = {
@@ -33,6 +34,8 @@ export type PropertyView = {
   address: string;
   internalStatus: 'Active' | 'Inactive' | 'Maintenance';
   iCalUrl: string;
+  basePrice: number;
+  bedrooms: number;
 };
 
 export type PropertyListingView = {
@@ -54,6 +57,8 @@ function toViewProperty(p: PropertyApiItem): PropertyView {
     address: p.address || '—',
     internalStatus: internal,
     iCalUrl: p.ical_feed_url || '',
+    basePrice: p.base_price || 0,
+    bedrooms: p.bedrooms || 0,
   };
 }
 
@@ -141,6 +146,9 @@ export type CreatePropertyPayload = {
   airbnb_id?: string;
   vrbo_id?: string;
   booking_id?: string;
+  bedrooms?: number;
+  base_price?: number;
+  owner_id?: number;
 };
 
 type CreatePropertyResponse = {
@@ -175,6 +183,15 @@ export const createPropertySchema = yup.object({
   status: yup.string()
     .oneOf(['active', 'inactive', 'maintenance'], 'Status must be Active, Inactive, or Maintenance')
     .required('Status is required'),
+  bedrooms: yup.number()
+    .optional()
+    .min(0, 'Rooms cannot be negative'),
+  base_price: yup.number()
+    .optional()
+    .min(0, 'Price cannot be negative'),
+  owner_id: yup.number()
+    .optional()
+    .nullable(),
   airbnb_id: yup.string()
     .optional()
     .max(50, 'Airbnb ID must not exceed 50 characters'),

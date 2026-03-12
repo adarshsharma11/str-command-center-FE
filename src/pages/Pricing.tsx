@@ -42,7 +42,7 @@ import {
   Circle,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/dashboardCalculations';
-import { usePropertiesQuery } from '@/lib/api/property';
+import { usePropertiesQuery, propertyMappers, type PropertyView } from '@/lib/api/property';
 import { useBookingsQuery } from '@/lib/api/booking';
 import {
   format,
@@ -274,7 +274,7 @@ function PricingCalendar({
   currentMonth,
   bookedDates,
 }: {
-  property: any;
+  property: PropertyView;
   currentMonth: Date;
   bookedDates: string[];
 }) {
@@ -340,11 +340,13 @@ function PricingCalendar({
 export default function Pricing() {
   const { data: properties, isLoading: isLoadingProperties } = usePropertiesQuery();
   const { data: bookings, isLoading: isLoadingBookings } = useBookingsQuery();
-  const propertyList = properties?.data || [];
-  const bookingList = bookings?.data.bookings || [];
-  console.log(bookings, bookingList, 'OOOO', propertyList);
   
-  const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  const propertyList = useMemo(() => 
+    (properties?.data ?? []).map(propertyMappers.toViewProperty),
+    [properties]
+  );
+  
+  const [selectedProperty, setSelectedProperty] = useState<PropertyView | null>(null);
   const [config, setConfig] = useState<PricingConfig>(DEFAULT_CONFIG);
   const [autoSync, setAutoSync] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -354,9 +356,9 @@ const bookedDates = useMemo(() => {
 
   const dates: string[] = [];
 
-  bookings.data.bookings.forEach((booking: any) => {
+  bookings.data.bookings.forEach((booking: { property_id: string | number; check_in_date: string; check_out_date: string }) => {
 
-    if (Number(booking.property_id) !== Number(selectedProperty.id)) return;
+    if (String(booking.property_id) !== String(selectedProperty.id)) return;
 
     const start = startOfDay(new Date(booking.check_in_date));
     const end = startOfDay(new Date(booking.check_out_date));
