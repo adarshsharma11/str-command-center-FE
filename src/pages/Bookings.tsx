@@ -66,8 +66,9 @@ export default function Bookings() {
   };
   
   const apiBookings = data?.data?.bookings ?? [];
-  const totalPages = data?.data?.total_pages ?? 1;
   const totalItems = data?.data?.total ?? 0;
+  // Fallback calculation for totalPages if the API doesn't provide it
+  const totalPages = data?.data?.total_pages ?? (Math.ceil(totalItems / limit) || 1);
   
   const bookings: ViewBooking[] = apiBookings.map(toViewBooking);
 

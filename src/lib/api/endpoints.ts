@@ -9,6 +9,13 @@ export const ENDPOINTS = {
     LIST : `${API_PREFIX}/bookings`,
     SEND_WELCOME: `${API_PREFIX}/bookings/send-welcome`,
   },
+  SERVICE_BOOKINGS: {
+    CREATE: `${API_PREFIX}/service-bookings`,
+    STATUS: `${API_PREFIX}/service-bookings/status`,
+    RESPONSES: `${API_PREFIX}/service-bookings/responses`,
+    RESPONSES_STREAM: `${API_PREFIX}/service-bookings/responses/stream`,
+    RESPOND: `${API_PREFIX}/service-bookings/respond`,
+  },
   PROPERTY : {
     LIST : `${API_PREFIX}/property`,
   },
