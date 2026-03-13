@@ -166,8 +166,20 @@ function formatMetricValue(metric: string, value: number): string {
 }
 
 export function PerformancePreview({ data }: PerformancePreviewProps) {
+  // Defensive checks for data
+  const currentPeriod = data?.current_period || {
+    start: new Date().toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0],
+    label: 'Current Period',
+    total_revenue: 0,
+    total_bookings: 0,
+    average_daily_rate: 0,
+    occupancy_rate: 0,
+    total_nights: 0
+  };
+
   // Default to previous month from current period
-  const defaultPrevMonth = subMonths(new Date(data.current_period.start), 1);
+  const defaultPrevMonth = subMonths(new Date(currentPeriod.start), 1);
   const [comparisonMonth, setComparisonMonth] = useState<string>(String(defaultPrevMonth.getMonth()));
   const [comparisonYear, setComparisonYear] = useState<string>(String(defaultPrevMonth.getFullYear()));
 
@@ -175,6 +187,10 @@ export function PerformancePreview({ data }: PerformancePreviewProps) {
   const comparisonData = useMemo(() => {
     return generateComparisonData(data, parseInt(comparisonMonth), parseInt(comparisonYear));
   }, [data, comparisonMonth, comparisonYear]);
+
+  const metricsComparison = comparisonData?.metrics_comparison || [];
+  const revenueTrend = comparisonData?.revenue_trend || [];
+  const occupancyTrend = comparisonData?.occupancy_trend || [];
 
   return (
     <div className="space-y-6">
@@ -229,7 +245,7 @@ export function PerformancePreview({ data }: PerformancePreviewProps) {
 
       {/* Metrics Comparison Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {comparisonData.metrics_comparison.map((metric) => (
+        {metricsComparison.map((metric) => (
           <Card key={metric.metric}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-3">
@@ -250,10 +266,11 @@ export function PerformancePreview({ data }: PerformancePreviewProps) {
                     {metric.change_percentage.toFixed(1)}%
                   </Badge>
                 </div>
-
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>vs</span>
-                  <span>{formatMetricValue(metric.metric, metric.previous_value)}</span>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Previous:</span>
+                  <span className="font-medium">
+                    {formatMetricValue(metric.metric, metric.previous_value)}
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -261,111 +278,130 @@ export function PerformancePreview({ data }: PerformancePreviewProps) {
         ))}
       </div>
 
-      {/* Revenue Trend Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Revenue Comparison</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={comparisonData.revenue_trend}>
-                <defs>
-                  <linearGradient id="currentGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="previousGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(v) => formatCompactCurrency(v)} tick={{ fontSize: 12 }} />
-                <Tooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, name) => [
-                        formatCurrency(value as number),
-                        name === 'current' ? 'Current' : 'Previous',
-                      ]}
+      {/* Comparison Trends Row */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Revenue Trend Area Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center justify-between">
+              Revenue Comparison Trend
+              <Badge variant="outline" className="font-normal text-xs">
+                {comparisonData.current_period.label} vs {comparisonData.previous_period.label}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {revenueTrend.length > 0 ? (
+              <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={revenueTrend}>
+                    <defs>
+                      <linearGradient id="colorCurrent" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity="0.1"/>
+                        <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity="0"/>
+                      </linearGradient>
+                      <linearGradient id="colorPrevious" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity="0.1"/>
+                        <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity="0"/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis tickFormatter={(v) => formatCompactCurrency(v)} tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name) => [
+                            formatCurrency(value as number),
+                            name === 'current' ? comparisonData.current_period.label : comparisonData.previous_period.label,
+                          ]}
+                        />
+                      }
                     />
-                  }
-                />
-                <Legend
-                  verticalAlign="top"
-                  height={36}
-                  formatter={(value) => (value === 'current' ? 'Current Period' : 'Previous Period')}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="previous"
-                  stroke="hsl(var(--chart-2))"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  fill="url(#previousGradient)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="current"
-                  stroke="hsl(var(--chart-1))"
-                  strokeWidth={2}
-                  fill="url(#currentGradient)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </CardContent>
-      </Card>
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="current"
+                      stroke="hsl(var(--chart-1))"
+                      fillOpacity={1}
+                      fill="url(#colorCurrent)"
+                      strokeWidth={2}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="previous"
+                      stroke="hsl(var(--chart-2))"
+                      fillOpacity={1}
+                      fill="url(#colorPrevious)"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                No revenue trend data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Occupancy Trend Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Occupancy Comparison</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={comparisonData.occupancy_trend}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12 }} />
-                <Tooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, name) => [
-                        `${value}%`,
-                        name === 'current' ? 'Current' : 'Previous',
-                      ]}
+        {/* Occupancy Trend Line Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center justify-between">
+              Occupancy Comparison Trend
+              <Badge variant="outline" className="font-normal text-xs">
+                {comparisonData.current_period.label} vs {comparisonData.previous_period.label}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {occupancyTrend.length > 0 ? (
+              <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={occupancyTrend}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name) => [
+                            `${value}%`,
+                            name === 'current' ? comparisonData.current_period.label : comparisonData.previous_period.label,
+                          ]}
+                        />
+                      }
                     />
-                  }
-                />
-                <Legend
-                  verticalAlign="top"
-                  height={36}
-                  formatter={(value) => (value === 'current' ? 'Current Period' : 'Previous Period')}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="previous"
-                  stroke="hsl(var(--chart-2))"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={{ r: 4 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="current"
-                  stroke="hsl(var(--chart-1))"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </CardContent>
-      </Card>
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="current"
+                      stroke="hsl(var(--chart-1))"
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="previous"
+                      stroke="hsl(var(--chart-2))"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                No occupancy trend data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Period Summary Table */}
       <Card>

@@ -4,6 +4,7 @@ export const ENDPOINTS = {
   AUTH: {
     LOGIN: `${API_PREFIX}/auth/login`,
     REGISTER: `${API_PREFIX}/auth/register`,
+    OWNERS: `${API_PREFIX}/auth/owners`,
   },
   BOOKING : {
     LIST : `${API_PREFIX}/bookings`,
@@ -50,6 +51,7 @@ export const ENDPOINTS = {
     OWNER_STATEMENT: `${API_PREFIX}/reports/owner-statement`,
     BOOKING_SUMMARY: `${API_PREFIX}/reports/booking-summary`,
     SERVICE_REVENUE: `${API_PREFIX}/reports/service-revenue`,
+    SERVICE_PROVIDER: `${API_PREFIX}/reports/service-provider`,
     OCCUPANCY: `${API_PREFIX}/reports/occupancy`,
     PERFORMANCE: `${API_PREFIX}/reports/performance`,
     SEND_EMAIL: `${API_PREFIX}/reports/send-email`,

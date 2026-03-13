@@ -105,7 +105,7 @@ export function ServiceProviderPreview({ data }: ServiceProviderPreviewProps) {
               <span className="text-sm text-muted-foreground">Completed</span>
             </div>
             <p className="text-2xl font-bold mt-2">
-              {data.jobs.filter((j) => j.status === 'completed').length}
+              {(data.jobs || []).filter((j) => j.status === 'completed').length}
             </p>
           </CardContent>
         </Card>
@@ -116,7 +116,7 @@ export function ServiceProviderPreview({ data }: ServiceProviderPreviewProps) {
               <span className="text-sm text-muted-foreground">Tips Earned</span>
             </div>
             <p className="text-2xl font-bold mt-2">
-              {formatCurrency(data.jobs.reduce((sum, j) => sum + (j.tip || 0), 0))}
+              {formatCurrency((data.jobs || []).reduce((sum, j) => sum + (j.tip || 0), 0))}
             </p>
           </CardContent>
         </Card>
@@ -141,7 +141,7 @@ export function ServiceProviderPreview({ data }: ServiceProviderPreviewProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.jobs.map((job) => {
+              {(data.jobs || []).map((job) => {
                 const StatusIcon = STATUS_CONFIG[job.status].icon;
                 return (
                   <TableRow key={job.job_id}>
@@ -190,14 +190,14 @@ export function ServiceProviderPreview({ data }: ServiceProviderPreviewProps) {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tips</span>
               <span className="font-medium">
-                {formatCurrency(data.jobs.reduce((sum, j) => sum + (j.tip || 0), 0))}
+                {formatCurrency((data.jobs || []).reduce((sum, j) => sum + (j.tip || 0), 0))}
               </span>
             </div>
             <Separator />
             <div className="flex justify-between">
               <span className="text-muted-foreground">Gross Total</span>
               <span className="font-medium">
-                {formatCurrency(data.total_revenue + data.jobs.reduce((sum, j) => sum + (j.tip || 0), 0))}
+                {formatCurrency(data.total_revenue + (data.jobs || []).reduce((sum, j) => sum + (j.tip || 0), 0))}
               </span>
             </div>
             <div className="flex justify-between text-red-500">

@@ -26,7 +26,10 @@ const SERVICE_ICONS: Record<string, string> = {
 };
 
 export function ServiceRevenuePreview({ data }: ServiceRevenuePreviewProps) {
-  const maxRevenue = Math.max(...data.services.map((s) => s.total_revenue));
+  const services = data?.services || [];
+  const maxRevenue = services.length > 0 
+    ? Math.max(...services.map((s) => s.total_revenue)) 
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -38,7 +41,7 @@ export function ServiceRevenuePreview({ data }: ServiceRevenuePreviewProps) {
               <DollarSign className="h-4 w-4 text-green-500" />
               <span className="text-sm text-muted-foreground">Total Revenue</span>
             </div>
-            <p className="text-2xl font-bold mt-2">{formatCurrency(data.total_revenue)}</p>
+            <p className="text-2xl font-bold mt-2">{formatCurrency(data.total_revenue || 0)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -47,7 +50,7 @@ export function ServiceRevenuePreview({ data }: ServiceRevenuePreviewProps) {
               <Calendar className="h-4 w-4 text-blue-500" />
               <span className="text-sm text-muted-foreground">Total Bookings</span>
             </div>
-            <p className="text-2xl font-bold mt-2">{data.total_bookings}</p>
+            <p className="text-2xl font-bold mt-2">{data.total_bookings || 0}</p>
           </CardContent>
         </Card>
         <Card>
@@ -56,7 +59,7 @@ export function ServiceRevenuePreview({ data }: ServiceRevenuePreviewProps) {
               <Sparkles className="h-4 w-4 text-purple-500" />
               <span className="text-sm text-muted-foreground">Service Types</span>
             </div>
-            <p className="text-2xl font-bold mt-2">{data.services.length}</p>
+            <p className="text-2xl font-bold mt-2">{services.length}</p>
           </CardContent>
         </Card>
       </div>
@@ -70,46 +73,52 @@ export function ServiceRevenuePreview({ data }: ServiceRevenuePreviewProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {data.services.map((service) => (
-            <div key={service.service_name} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">
-                    {SERVICE_ICONS[service.service_type] || '✨'}
-                  </span>
-                  <div>
-                    <p className="font-medium">{service.service_name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {service.bookings_count} bookings · Avg {formatCurrency(service.average_price)}
-                    </p>
+          {services.length > 0 ? (
+            services.map((service) => (
+              <div key={service.service_name} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">
+                      {SERVICE_ICONS[service.service_type] || '✨'}
+                    </span>
+                    <div>
+                      <p className="font-medium">{service.service_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {service.bookings_count} bookings · Avg {formatCurrency(service.average_price)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        'flex items-center gap-1',
+                        (service.trend || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                      )}
+                    >
+                      {(service.trend || 0) >= 0 ? (
+                        <TrendingUp className="h-3 w-3" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3" />
+                      )}
+                      {(service.trend || 0) >= 0 ? '+' : ''}{service.trend || 0}%
+                    </Badge>
+                    <span className="font-semibold min-w-[80px] text-right">
+                      {formatCurrency(service.total_revenue)}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      'flex items-center gap-1',
-                      service.trend >= 0 ? 'text-green-600' : 'text-red-600'
-                    )}
-                  >
-                    {service.trend >= 0 ? (
-                      <TrendingUp className="h-3 w-3" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3" />
-                    )}
-                    {service.trend >= 0 ? '+' : ''}{service.trend}%
-                  </Badge>
-                  <span className="font-semibold min-w-[80px] text-right">
-                    {formatCurrency(service.total_revenue)}
-                  </span>
-                </div>
+                <Progress
+                  value={maxRevenue > 0 ? (service.total_revenue / maxRevenue) * 100 : 0}
+                  className="h-2"
+                />
               </div>
-              <Progress
-                value={(service.total_revenue / maxRevenue) * 100}
-                className="h-2"
-              />
+            ))
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              No services found for the selected period.
             </div>
-          ))}
+          )}
         </CardContent>
       </Card>
 
@@ -123,7 +132,7 @@ export function ServiceRevenuePreview({ data }: ServiceRevenuePreviewProps) {
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.by_month}>
+                <LineChart data={data.by_month || []}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis
@@ -177,14 +186,14 @@ export function ServiceRevenuePreview({ data }: ServiceRevenuePreviewProps) {
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.top_properties} layout="vertical">
+                <BarChart data={data.top_properties || []} layout="vertical">
                   <XAxis type="number" tickFormatter={(v) => formatCompactCurrency(v)} />
                   <YAxis
                     type="category"
                     dataKey="property_name"
                     width={100}
                     tick={{ fontSize: 12 }}
-                    tickFormatter={(v) => v.length > 15 ? v.slice(0, 13) + '...' : v}
+                    tickFormatter={(v) => (v || '').length > 15 ? v.slice(0, 13) + '...' : (v || '')}
                   />
                   <Tooltip
                     content={

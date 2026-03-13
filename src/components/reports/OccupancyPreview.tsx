@@ -38,6 +38,9 @@ function getOccupancyBg(rate: number): string {
 }
 
 export function OccupancyPreview({ data }: OccupancyPreviewProps) {
+  const properties = data?.properties || [];
+  const byMonth = data?.by_month || [];
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -48,8 +51,8 @@ export function OccupancyPreview({ data }: OccupancyPreviewProps) {
               <BarChart3 className="h-4 w-4 text-blue-500" />
               <span className="text-sm text-muted-foreground">Overall Occupancy</span>
             </div>
-            <p className={cn('text-3xl font-bold mt-2', getOccupancyColor(data.overall_occupancy))}>
-              {data.overall_occupancy}%
+            <p className={cn('text-3xl font-bold mt-2', getOccupancyColor(data.overall_occupancy || 0))}>
+              {data.overall_occupancy || 0}%
             </p>
           </CardContent>
         </Card>
@@ -59,7 +62,7 @@ export function OccupancyPreview({ data }: OccupancyPreviewProps) {
               <Calendar className="h-4 w-4 text-green-500" />
               <span className="text-sm text-muted-foreground">Available Nights</span>
             </div>
-            <p className="text-2xl font-bold mt-2">{data.total_available_nights}</p>
+            <p className="text-2xl font-bold mt-2">{data.total_available_nights || 0}</p>
           </CardContent>
         </Card>
         <Card>
@@ -68,7 +71,7 @@ export function OccupancyPreview({ data }: OccupancyPreviewProps) {
               <Moon className="h-4 w-4 text-purple-500" />
               <span className="text-sm text-muted-foreground">Booked Nights</span>
             </div>
-            <p className="text-2xl font-bold mt-2">{data.total_booked_nights}</p>
+            <p className="text-2xl font-bold mt-2">{data.total_booked_nights || 0}</p>
           </CardContent>
         </Card>
         <Card>
@@ -77,7 +80,7 @@ export function OccupancyPreview({ data }: OccupancyPreviewProps) {
               <Building2 className="h-4 w-4 text-orange-500" />
               <span className="text-sm text-muted-foreground">Properties</span>
             </div>
-            <p className="text-2xl font-bold mt-2">{data.properties.length}</p>
+            <p className="text-2xl font-bold mt-2">{properties.length}</p>
           </CardContent>
         </Card>
       </div>
@@ -88,41 +91,47 @@ export function OccupancyPreview({ data }: OccupancyPreviewProps) {
           <CardTitle className="text-base">Occupancy by Property</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.properties} layout="vertical">
-                <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-                <YAxis
-                  type="category"
-                  dataKey="property_name"
-                  width={130}
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(v) => v.length > 18 ? v.slice(0, 16) + '...' : v}
-                />
-                <Tooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, _, props) => {
-                        const item = props.payload;
-                        return [
-                          `${value}% (${item.booked_nights}/${item.available_nights} nights)`,
-                          'Occupancy',
-                        ];
-                      }}
-                    />
-                  }
-                />
-                <Bar dataKey="occupancy_rate" radius={[0, 4, 4, 0]} maxBarSize={24}>
-                  {data.properties.map((entry, index) => (
-                    <rect
-                      key={`bar-${index}`}
-                      fill={entry.occupancy_rate >= 80 ? 'hsl(var(--chart-1))' : entry.occupancy_rate >= 60 ? 'hsl(var(--chart-3))' : 'hsl(var(--chart-5))'}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+          {properties.length > 0 ? (
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={properties} layout="vertical">
+                  <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                  <YAxis
+                    type="category"
+                    dataKey="property_name"
+                    width={130}
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(v) => (v || '').length > 18 ? v.slice(0, 16) + '...' : (v || '')}
+                  />
+                  <Tooltip
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value, _, props) => {
+                          const item = props.payload;
+                          return [
+                            `${value}% (${item.booked_nights}/${item.available_nights} nights)`,
+                            'Occupancy',
+                          ];
+                        }}
+                      />
+                    }
+                  />
+                  <Bar dataKey="occupancy_rate" radius={[0, 4, 4, 0]} maxBarSize={24}>
+                    {properties.map((entry, index) => (
+                      <rect
+                        key={`bar-${index}`}
+                        fill={entry.occupancy_rate >= 80 ? 'hsl(var(--chart-1))' : entry.occupancy_rate >= 60 ? 'hsl(var(--chart-3))' : 'hsl(var(--chart-5))'}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              No occupancy data available
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -145,51 +154,59 @@ export function OccupancyPreview({ data }: OccupancyPreviewProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.properties.map((property) => (
-                <TableRow key={property.property_id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{property.property_name}</p>
-                      <p className="text-xs text-muted-foreground max-w-[200px] truncate">
-                        {property.property_address}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-16">
-                        <Progress
-                          value={property.occupancy_rate}
-                          className={cn('h-2', getOccupancyBg(property.occupancy_rate))}
-                        />
+              {properties.length > 0 ? (
+                properties.map((property) => (
+                  <TableRow key={property.property_id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{property.property_name}</p>
+                        <p className="text-xs text-muted-foreground max-w-[200px] truncate">
+                          {property.property_address}
+                        </p>
                       </div>
-                      <span className={cn('font-medium', getOccupancyColor(property.occupancy_rate))}>
-                        {property.occupancy_rate}%
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">{property.available_nights}</TableCell>
-                  <TableCell className="text-center font-medium text-green-600">
-                    {property.booked_nights}
-                  </TableCell>
-                  <TableCell className="text-center text-muted-foreground">
-                    {property.blocked_nights}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {formatCurrency(property.revenue)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(property.average_daily_rate)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-16">
+                          <Progress
+                            value={property.occupancy_rate}
+                            className={cn('h-2', getOccupancyBg(property.occupancy_rate))}
+                          />
+                        </div>
+                        <span className={cn('font-medium', getOccupancyColor(property.occupancy_rate))}>
+                          {property.occupancy_rate}%
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">{property.available_nights}</TableCell>
+                    <TableCell className="text-center font-medium text-green-600">
+                      {property.booked_nights}
+                    </TableCell>
+                    <TableCell className="text-center text-muted-foreground">
+                      {property.blocked_nights}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrency(property.revenue)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(property.average_daily_rate)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    No property data found
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
       {/* Monthly Trend */}
-      {data.by_month.length > 1 && (
+      {byMonth.length > 1 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Monthly Occupancy Trend</CardTitle>
@@ -197,7 +214,7 @@ export function OccupancyPreview({ data }: OccupancyPreviewProps) {
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.by_month}>
+                <LineChart data={byMonth}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis
