@@ -18,10 +18,9 @@ import Pricing from "./pages/Pricing";
 import Settings from "./pages/Settings";
 import Testing from "./pages/Testing"; // New testing page for developers
 import NotFound from "./pages/NotFound";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, AuthWatcher } from "@/context/AuthContext";
 import PrivateRoute from "@/components/PrivateRoute";
 import PublicRoute from "@/components/PublicRoute";
-import { useAuth } from "@/context/AuthContext";
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -42,34 +41,13 @@ const queryClient = new QueryClient({
   }),
 });
 
-function AuthWatcher() {
-  const { token, isDevMode } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  useEffect(() => {
-    // Skip auth check in dev mode
-    if (isDevMode) return;
-    if (!token && location.pathname !== "/auth") {
-      navigate("/auth", { replace: true });
-    }
-  }, [token, location.pathname, navigate, isDevMode]);
-  useEffect(() => {
-    // Skip unauthorized handler in dev mode
-    if (isDevMode) return;
-    const handler = () => navigate("/auth", { replace: true });
-    window.addEventListener("auth:unauthorized", handler);
-    return () => window.removeEventListener("auth:unauthorized", handler);
-  }, [navigate, isDevMode]);
-  return null;
-}
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
       <AuthProvider>
         <BrowserRouter>
+          <Toaster />
+          <Sonner />
           <AuthWatcher />
           <Routes>
             {/* Root redirects to dashboard in dev mode, otherwise to auth */}

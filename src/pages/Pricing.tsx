@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
@@ -40,10 +42,16 @@ import {
   ChevronRight,
   Sun,
   Circle,
+  Loader2,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/dashboardCalculations';
 import { usePropertiesQuery, propertyMappers, type PropertyView } from '@/lib/api/property';
 import { useBookingsQuery } from '@/lib/api/booking';
+import {
+  fetchPricingSettings,
+  updatePricingSettings,
+  type PricingSettings as PricingConfig,
+} from '@/lib/api/pricing';
 import {
   format,
   addDays,
@@ -87,18 +95,12 @@ const DAY_OF_WEEK_MULTIPLIERS: Record<number, number> = {
   6: 1.20,  // Saturday
 };
 
-// Simplified config - just 3 controls
-interface PricingConfig {
-  weekendBoost: number;      // 0-50% boost for Fri/Sat
-  seasonalStrength: number;  // 0-100% how much to follow seasonal patterns
-  islandDiscount: number;    // 0-30% base discount for island dates
-}
-
 const DEFAULT_CONFIG: PricingConfig = {
-  weekendBoost: 20,
-  seasonalStrength: 75,
-  islandDiscount: 10,
+  weekend_boost: 20,
+  seasonal_strength: 75,
+  island_discount: 10,
 };
+
 
 /**
  * Detect if a date is an "island" - isolated available nights between bookings
@@ -223,7 +225,7 @@ function calculateManualPrice(
   // 1. Seasonal adjustment
   const month = date.getMonth();
   const rawSeasonMultiplier = SEASONALITY[month];
-  const seasonEffect = (rawSeasonMultiplier - 1) * (config.seasonalStrength / 100);
+  const seasonEffect = (rawSeasonMultiplier - 1) * (config.seasonal_strength / 100);
   multiplier *= (1 + seasonEffect);
 
   if (seasonEffect > 0.1) {
@@ -233,14 +235,14 @@ function calculateManualPrice(
   }
 
   // 2. Weekend boost
-  if (isWeekend(date) && config.weekendBoost > 0) {
-    multiplier *= (1 + config.weekendBoost / 100);
-    factors.push(`Weekend +${config.weekendBoost}%`);
+  if (isWeekend(date) && config.weekend_boost > 0) {
+    multiplier *= (1 + config.weekend_boost / 100);
+    factors.push(`Weekend +${config.weekend_boost}%`);
   }
 
   // 3. Island Discount
   const islandSize = detectIslandSize(date, bookedDates);
-  if (islandSize > 0 && config.islandDiscount > 0) {
+  if (islandSize > 0 && config.island_discount > 0) {
     isIsland = true;
     // Base discount for 3-night island, increased for smaller islands
     let discountMultiplier = 1;
@@ -251,7 +253,7 @@ function calculateManualPrice(
     }
     // islandSize === 3 uses base discount (1x)
 
-    const effectiveDiscount = config.islandDiscount * discountMultiplier;
+    const effectiveDiscount = config.island_discount * discountMultiplier;
     multiplier *= (1 - effectiveDiscount / 100);
     factors.push(`Island ${islandSize}d -${Math.round(effectiveDiscount)}%`);
   }
@@ -300,9 +302,10 @@ function PricingCalendar({
         const dateStr = format(date, 'yyyy-MM-dd');
         const isBooked = bookedDates.includes(dateStr);
         const isPast = isBefore(date, today);
-        const { price } = calculateAIPrice(200, date);
-        const diff = price - 200;
-        const diffPct = Math.round((diff / 200) * 100);
+        const basePrice = property.basePrice || 250;
+        const { price } = calculateAIPrice(basePrice, date);
+        const diff = price - basePrice;
+        const diffPct = Math.round((diff / basePrice) * 100);
 
         return (
           <div
@@ -338,9 +341,27 @@ function PricingCalendar({
 }
 
 export default function Pricing() {
+  const queryClient = useQueryClient();
   const { data: properties, isLoading: isLoadingProperties } = usePropertiesQuery();
   const { data: bookings, isLoading: isLoadingBookings } = useBookingsQuery();
   
+  // Fetch settings from API
+  const { data: settingsData, isLoading: isLoadingSettings } = useQuery({
+    queryKey: ['pricing-settings'],
+    queryFn: fetchPricingSettings,
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: updatePricingSettings,
+    onSuccess: () => {
+      toast.success('Pricing settings updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['pricing-settings'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to update settings: ${error.message}`);
+    }
+  });
+
   const propertyList = useMemo(() => 
     (properties?.data ?? []).map(propertyMappers.toViewProperty),
     [properties]
@@ -351,32 +372,37 @@ export default function Pricing() {
   const [autoSync, setAutoSync] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-const bookedDates = useMemo(() => {
-  if (!bookings?.data?.bookings || !selectedProperty) return [];
+  // Sync local config with API data when it arrives
+  useEffect(() => {
+    if (settingsData?.data) {
+      setConfig(settingsData.data);
+    }
+  }, [settingsData]);
 
-  const dates: string[] = [];
+    const bookedDates = useMemo(() => {
+    if (!bookings?.data?.bookings || !selectedProperty) return [];
 
-  bookings.data.bookings.forEach((booking: { property_id: string | number; check_in_date: string; check_out_date: string }) => {
+    const dates: string[] = [];
 
-    if (String(booking.property_id) !== String(selectedProperty.id)) return;
+    bookings.data.bookings.forEach((booking) => {
+      if (String(booking.property_id) !== String(selectedProperty.id)) return;
+      if (!booking.check_in_date || !booking.check_out_date) return;
 
-    const start = startOfDay(new Date(booking.check_in_date));
-    const end = startOfDay(new Date(booking.check_out_date));
+      const start = startOfDay(new Date(booking.check_in_date));
+      const end = startOfDay(new Date(booking.check_out_date));
 
-    const days = eachDayOfInterval({
-      start,
-      end: addDays(end, -1),
+      const days = eachDayOfInterval({
+        start,
+        end: addDays(end, -1),
+      });
+
+      days.forEach((d) => {
+        dates.push(format(d, "yyyy-MM-dd"));
+      });
     });
 
-    days.forEach((d) => {
-      dates.push(format(d, "yyyy-MM-dd"));
-    });
-
-  });
-
-  return dates;
-
-}, [bookings, selectedProperty]);
+    return dates;
+  }, [bookings, selectedProperty]);
 
   useEffect(() => {
   if (propertyList.length && !selectedProperty) {
@@ -488,7 +514,7 @@ const pricingPreview = useMemo(() => {
                     >
                       <div className="font-medium text-sm">{p.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        Base: {formatCurrency(basePrice)}/night
+                        Base: {formatCurrency(p.basePrice || 250)}/night
                       </div>
                     </button>
                   ))}
@@ -652,12 +678,12 @@ const pricingPreview = useMemo(() => {
                           </div>
                         </div>
                         <Badge variant="secondary" className="text-base font-bold">
-                          +{config.weekendBoost}%
+                          +{config.weekend_boost}%
                         </Badge>
                       </div>
                       <Slider
-                        value={[config.weekendBoost]}
-                        onValueChange={([v]) => setConfig({ ...config, weekendBoost: v })}
+                        value={[config.weekend_boost]}
+                        onValueChange={([v]) => setConfig({ ...config, weekend_boost: v })}
                         max={50}
                         step={5}
                         className="py-2"
@@ -681,12 +707,12 @@ const pricingPreview = useMemo(() => {
                           </div>
                         </div>
                         <Badge variant="secondary" className="text-base font-bold">
-                          {config.seasonalStrength}%
+                          {config.seasonal_strength}%
                         </Badge>
                       </div>
                       <Slider
-                        value={[config.seasonalStrength]}
-                        onValueChange={([v]) => setConfig({ ...config, seasonalStrength: v })}
+                        value={[config.seasonal_strength]}
+                        onValueChange={([v]) => setConfig({ ...config, seasonal_strength: v })}
                         max={100}
                         step={10}
                         className="py-2"
@@ -722,12 +748,12 @@ const pricingPreview = useMemo(() => {
                           </div>
                         </div>
                         <Badge variant="secondary" className="text-base font-bold">
-                          -{config.islandDiscount}%
+                          -{config.island_discount}%
                         </Badge>
                       </div>
                       <Slider
-                        value={[config.islandDiscount]}
-                        onValueChange={([v]) => setConfig({ ...config, islandDiscount: v })}
+                        value={[config.island_discount]}
+                        onValueChange={([v]) => setConfig({ ...config, island_discount: v })}
                         max={30}
                         step={5}
                         className="py-2"
@@ -749,26 +775,40 @@ const pricingPreview = useMemo(() => {
                       <div className="space-y-1 text-xs text-muted-foreground">
                         <div className="flex justify-between">
                           <span>3-night island:</span>
-                          <span className="font-medium">-{config.islandDiscount}% (base)</span>
+                          <span className="font-medium">-{config.island_discount}% (base)</span>
                         </div>
                         <div className="flex justify-between">
                           <span>2-night island:</span>
-                          <span className="font-medium">-{Math.round(config.islandDiscount * 1.33)}% (1.33x)</span>
+                          <span className="font-medium">-{Math.round(config.island_discount * 1.33)}% (1.33x)</span>
                         </div>
                         <div className="flex justify-between">
                           <span>1-night island:</span>
-                          <span className="font-medium">-{Math.round(config.islandDiscount * 1.5)}% (1.5x)</span>
+                          <span className="font-medium">-{Math.round(config.island_discount * 1.5)}% (1.5x)</span>
                         </div>
                       </div>
                     </div>
 
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setConfig(DEFAULT_CONFIG)}
-                    >
-                      Reset to Defaults
-                    </Button>
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setConfig(DEFAULT_CONFIG)}
+                      >
+                        Reset
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={() => updateSettingsMutation.mutate(config)}
+                        disabled={updateSettingsMutation.isPending}
+                      >
+                        {updateSettingsMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                        )}
+                        Save Rules
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>

@@ -115,15 +115,7 @@ export async function createScheduledReport(data: {
   recipients: string[];
   filters: ReportFilters;
 }): Promise<{ success: boolean; data: ScheduledReport }> {
-  await new Promise(resolve => setTimeout(resolve, 800));
-  const newReport: ScheduledReport = {
-    id: `sched-${Date.now()}`,
-    ...data,
-    next_run: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    created_at: new Date().toISOString(),
-    is_active: true,
-  };
-  return { success: true, data: newReport };
+  return apiClient.post(ENDPOINTS.REPORTS.SCHEDULED, data);
 }
 
 /**
@@ -131,8 +123,8 @@ export async function createScheduledReport(data: {
  * TODO: [ADARSH] Connect to backend API at DELETE /api/v1/reports/scheduled/:id
  */
 export async function deleteScheduledReport(id: string): Promise<{ success: boolean }> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return { success: true };
+  const url = ENDPOINTS.REPORTS.DELETE_SCHEDULED.replace(':id', id);
+  return apiClient.delete(url);
 }
 
 /**
@@ -140,8 +132,8 @@ export async function deleteScheduledReport(id: string): Promise<{ success: bool
  * TODO: [ADARSH] Connect to backend API at PATCH /api/v1/reports/scheduled/:id
  */
 export async function toggleScheduledReport(id: string, isActive: boolean): Promise<{ success: boolean }> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return { success: true };
+  const url = ENDPOINTS.REPORTS.TOGGLE_SCHEDULED.replace(':id', id);
+  return apiClient.patch(url, { is_active: isActive });
 }
 
 // --- React Query Hooks ---

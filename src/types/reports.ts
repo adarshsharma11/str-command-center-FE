@@ -22,6 +22,7 @@ export interface OwnerStatementData {
   period_start: string;
   period_end: string;
   properties: OwnerPropertyStatement[];
+  services_summary?: { name: string; count: number; revenue: number }[];
   rental_revenue: number;
   services_revenue: number;
   total_revenue: number;
