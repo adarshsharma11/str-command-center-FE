@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getToken, setToken as persistToken, clearToken } from '@/lib/auth/token';
 import { useLoginMutation, useRegisterMutation, type LoginCredentials, type RegisterPayload, type AuthResponse } from '@/lib/api/auth';
 import { env } from '@/config/env';
@@ -119,6 +120,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function AuthWatcher() {
+  const { token, isDevMode } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Skip auth check in dev mode
+    if (isDevMode) return;
+    if (!token && location.pathname !== "/auth") {
+      navigate("/auth", { replace: true });
+    }
+  }, [token, location.pathname, navigate, isDevMode]);
+
+  useEffect(() => {
+    // Skip unauthorized handler in dev mode
+    if (isDevMode) return;
+    const handler = () => navigate("/auth", { replace: true });
+    window.addEventListener("auth:unauthorized", handler);
+    return () => window.removeEventListener("auth:unauthorized", handler);
+  }, [navigate, isDevMode]);
+
+  return null;
 }
 
 export function useAuth() {

@@ -1,4 +1,4 @@
-import { Building2, DollarSign, TrendingDown, TrendingUp, Sparkles } from 'lucide-react';
+import { Building2, DollarSign, TrendingDown, TrendingUp, Sparkles, ClipboardList } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -17,18 +17,6 @@ import { format, parseISO } from 'date-fns';
 interface OwnerStatementPreviewProps {
   data: OwnerStatementData;
 }
-
-// TODO: [ADARSH] Replace with actual services data from API
-const MOCK_SERVICES_BY_PROPERTY: Record<string, { name: string; revenue: number; bookings: number }[]> = {
-  '1': [
-    { name: 'Private Chef', revenue: 1800, bookings: 3 },
-    { name: 'Spa & Massage', revenue: 900, bookings: 2 },
-  ],
-  '2': [
-    { name: 'Private Chef', revenue: 1200, bookings: 2 },
-    { name: 'Ski Guide', revenue: 600, bookings: 1 },
-  ],
-};
 
 export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
   return (
@@ -113,6 +101,47 @@ export function OwnerStatementPreview({ data }: OwnerStatementPreviewProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Services Summary Section */}
+      {data.services_summary && data.services_summary.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-purple-600" />
+              <CardTitle className="text-base">Unique Services List</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Service Name</TableHead>
+                  <TableHead className="text-center">Count</TableHead>
+                  <TableHead className="text-right">Total Revenue</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.services_summary.map((service, idx) => (
+                  <TableRow key={`global-service-${idx}`}>
+                    <TableCell className="font-medium">
+                      <span className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-purple-500" />
+                        {service.name}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="secondary">{service.count}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-purple-600">
+                      {formatCurrency(service.revenue)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Property Breakdown */}
       {data.properties.map((property) => {

@@ -56,6 +56,8 @@ export const ENDPOINTS = {
     PERFORMANCE: `${API_PREFIX}/reports/performance`,
     SEND_EMAIL: `${API_PREFIX}/reports/send-email`,
     SCHEDULED: `${API_PREFIX}/reports/scheduled`,
+    DELETE_SCHEDULED: `${API_PREFIX}/reports/scheduled/:id`,
+    TOGGLE_SCHEDULED: `${API_PREFIX}/reports/scheduled/:id`,
     SCHEDULED_DETAIL: `${API_PREFIX}/reports/scheduled/:id`,
   },
   EMAILS: {
@@ -63,6 +65,11 @@ export const ENDPOINTS = {
     SENT: `${API_PREFIX}/emails/sent`,
     DETAIL: `${API_PREFIX}/emails/:id`,
     REPLY: `${API_PREFIX}/emails/:id/reply`,
+  },
+  PRICING: {
+    SETTINGS: `${API_PREFIX}/pricing/settings`,
+    RULES: `${API_PREFIX}/pricing/rules`,
+    DELETE_RULE: `${API_PREFIX}/pricing/rules/:id`,
   },
   INTEGRATIONS: {
     // User endpoints
