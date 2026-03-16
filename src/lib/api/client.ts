@@ -1,6 +1,10 @@
 import { env } from '@/config/env';
 import { getToken, clearToken } from '@/lib/auth/token';
 
+export interface ApiRequestOptions extends RequestInit {
+  skipAuthRedirect?: boolean;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -10,7 +14,7 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options?: RequestInit
+    options?: ApiRequestOptions
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
@@ -25,7 +29,7 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
+      if ((response.status === 401 || response.status === 403) && !options?.skipAuthRedirect) {
         clearToken();
         try {
           window.dispatchEvent(new CustomEvent('auth:unauthorized'));
@@ -41,18 +45,19 @@ class ApiClient {
     return response.json();
   }
 
-  async get<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'GET' });
+  async get<T>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
+    return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
-  async post<T>(endpoint: string, data?: unknown): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
     return this.request<T>(endpoint, {
+      ...options,
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async patch<T>(endpoint: string, data?: unknown, queryParams?: Record<string, string | number | boolean>): Promise<T> {
+  async patch<T>(endpoint: string, data?: unknown, queryParams?: Record<string, string | number | boolean>, options?: ApiRequestOptions): Promise<T> {
     let fullEndpoint = endpoint;
     if (queryParams) {
       const searchParams = new URLSearchParams();
@@ -63,20 +68,22 @@ class ApiClient {
     }
     
     return this.request<T>(fullEndpoint, {
+      ...options,
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  async put<T>(endpoint: string, data: unknown): Promise<T> {
+  async put<T>(endpoint: string, data: unknown, options?: ApiRequestOptions): Promise<T> {
     return this.request<T>(endpoint, {
+      ...options,
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'DELETE' });
+  async delete<T>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
+    return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
 }
 
