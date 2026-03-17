@@ -19,8 +19,8 @@ jobs:
             cd /var/www/app/str-command-center-FE
             git pull origin main
             rm -rf node_modules
-            rm package-lock.json yarn.lock
+            rm package-lock.json
             npm cache clean --force
             npm install
-            npm run build
+            NODE_OPTIONS="--max-old-space-size=4096" npm run build
             systemctl reload nginx
