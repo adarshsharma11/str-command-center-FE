@@ -3,6 +3,7 @@ export { SkeletonLoader, SkeletonList, SkeletonCard } from '@/components/ui/skel
 
 // Page-specific Skeleton Loaders
 export { AutomationPageSkeleton } from './AutomationSkeleton';
+export { PricingPageSkeleton } from './PricingSkeleton';
 
 // Crew-specific Skeleton Loaders
 export { 

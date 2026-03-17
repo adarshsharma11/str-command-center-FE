@@ -52,6 +52,7 @@ import {
   updatePricingSettings,
   type PricingSettings as PricingConfig,
 } from '@/lib/api/pricing';
+import { PricingPageSkeleton } from '@/components/skeletons/PricingSkeleton';
 import {
   format,
   addDays,
@@ -449,7 +450,7 @@ const pricingPreview = useMemo(() => {
   if (isLoadingProperties || isLoadingBookings || !selectedProperty) {
   return (
     <Layout>
-      <div className="p-6">Loading pricing data...</div>
+      <PricingPageSkeleton />
     </Layout>
   );
 }
