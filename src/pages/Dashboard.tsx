@@ -4,7 +4,7 @@ import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Home, Sparkles, TrendingUp, Percent, DollarSign, Calendar, ClipboardList } from 'lucide-react';
+import { MapPin, Home, Sparkles, ClipboardList } from 'lucide-react';
 import { useDashboardExtendedQuery } from '@/lib/api/dashboard';
 import { useDateRangeFilter } from '@/hooks/useDateRangeFilter';
 import { useDashboardPreferences } from '@/hooks/useDashboardPreferences';
