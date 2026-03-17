@@ -203,6 +203,7 @@ export interface ReportFilters {
   to: string;
   propertyIds?: string[];
   ownerIds?: string[];
+  providerId?: string;
   comparison?: ComparisonType;
 }
 

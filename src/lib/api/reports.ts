@@ -62,7 +62,7 @@ export async function fetchServiceRevenue(filters: ReportFilters): Promise<Repor
  */
 export async function fetchServiceProvider(filters: ReportFilters): Promise<ReportResponse<ServiceProviderData>> {
   const params = new URLSearchParams({ from: filters.from, to: filters.to });
-  // Add providerId if available in filters
+  if (filters.providerId) params.append('providerId', filters.providerId);
   
   return apiClient.get<ReportResponse<ServiceProviderData>>(`${ENDPOINTS.REPORTS.SERVICE_PROVIDER}?${params}`);
 }

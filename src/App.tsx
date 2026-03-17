@@ -17,6 +17,7 @@ import Reports from "./pages/Reports";
 import Pricing from "./pages/Pricing";
 import Settings from "./pages/Settings";
 import Testing from "./pages/Testing"; // New testing page for developers
+import ServiceBookingRespond from "./pages/ServiceBookingRespond";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, AuthWatcher } from "@/context/AuthContext";
 import PrivateRoute from "@/components/PrivateRoute";
@@ -57,6 +58,9 @@ const App = () => (
             <Route element={<PublicRoute />}>
               <Route path="/auth" element={<Auth />} />
             </Route>
+
+            {/* Public landing pages (always accessible) */}
+            <Route path="/service-bookings/respond" element={<ServiceBookingRespond />} />
             
             {/* Private routes - only accessible when logged in */}
             <Route element={<PrivateRoute />}>

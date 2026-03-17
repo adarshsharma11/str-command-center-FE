@@ -123,17 +123,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function AuthWatcher() {
-  const { token, isDevMode } = useAuth();
+  const { isDevMode } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    // Skip auth check in dev mode
-    if (isDevMode) return;
-    if (!token && location.pathname !== "/auth") {
-      navigate("/auth", { replace: true });
-    }
-  }, [token, location.pathname, navigate, isDevMode]);
 
   useEffect(() => {
     // Skip unauthorized handler in dev mode
