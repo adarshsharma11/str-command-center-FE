@@ -109,6 +109,8 @@ export type DashboardDataExtended = DashboardData & {
   revenue_trends: {
     current_period: RevenueTrendPoint[];
     last_year_period: RevenueTrendPoint[];
+    current_period_monthly?: RevenueTrendPoint[];
+    last_year_period_monthly?: RevenueTrendPoint[];
   };
   occupancy_by_property: PropertyOccupancy[];
   revenue_by_channel: ChannelRevenue[];

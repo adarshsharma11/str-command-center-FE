@@ -94,7 +94,7 @@ export default function Dashboard() {
     guest_origins: [],
     priority_tasks: [],
     revenue_forecast: [],
-    revenue_trends: { current_period: [], last_year_period: [] },
+    revenue_trends: { current_period: [], last_year_period: [], current_period_monthly: [], last_year_period_monthly: [] },
     occupancy_by_property: [],
     revenue_by_channel: [],
     payment_collection: { paid: 0, partial: 0, pending: 0, total: 0 },
@@ -112,13 +112,14 @@ export default function Dashboard() {
     { label: 'Pending Payments', value: `$${(data.pending_payments?.value ?? 0).toLocaleString()}` },
   ];
 
-  // Map API tasks to Task interface
+  // Map API tasks to Task interface — map backend priorities to frontend P1-P4
+  const priorityMap: Record<string, Priority> = { urgent: 'P1', high: 'P1', medium: 'P2', low: 'P3' };
   const tasks: Task[] = (data.priority_tasks ?? []).map((t) => ({
     id: t.id.toString(),
     title: t.title,
     type: t.type as TaskType,
-    priority: t.priority as Priority,
-    status: (t.status === 'urgent' ? 'Pending' : 'In Progress') as TaskStatus,
+    priority: priorityMap[t.priority] ?? 'P2',
+    status: (t.status === 'pending' ? 'Pending' : 'In Progress') as TaskStatus,
     dueDate: new Date(t.due_date),
     description: t.title,
     propertyId: 'unknown',
@@ -169,6 +170,8 @@ export default function Dashboard() {
             <RevenueTrendChart
               currentPeriod={data.revenue_trends?.current_period ?? []}
               lastYearPeriod={data.revenue_trends?.last_year_period ?? []}
+              currentPeriodMonthly={data.revenue_trends?.current_period_monthly ?? []}
+              lastYearPeriodMonthly={data.revenue_trends?.last_year_period_monthly ?? []}
             />
           </DashboardSection>
         )}
