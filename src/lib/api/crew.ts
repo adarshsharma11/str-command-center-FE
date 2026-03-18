@@ -10,6 +10,8 @@ export type CrewApiItem = {
   role: string;
   active: boolean;
   category_id: number;
+  price?: string | null;
+  time?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -21,6 +23,8 @@ export type CreateCrewPayload = {
   phone: string;
   role: string;
   category_id: number;
+  price?: string | null;
+  time?: string | null;
 };
 
 export type UpdateCrewPayload = Partial<CreateCrewPayload>;

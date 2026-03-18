@@ -1,4 +1,4 @@
-import { useQuery, useMutation, type QueryOptions, type MutationOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, type QueryOptions, type MutationOptions, type UseMutationOptions } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import * as yup from 'yup';
@@ -204,3 +204,18 @@ export const createPropertySchema = yup.object({
 });
 
 export type CreatePropertyFormData = yup.InferType<typeof createPropertySchema>;
+
+// Delete Property
+async function deleteProperty(id: string): Promise<{ success: boolean }> {
+  const endpoint = ENDPOINTS.PROPERTY.DELETE.replace(':id', id);
+  return apiClient.delete<{ success: boolean }>(endpoint);
+}
+
+export function useDeletePropertyMutation(
+  options?: UseMutationOptions<{ success: boolean }, Error, string>
+) {
+  return useMutation<{ success: boolean }, Error, string>({
+    mutationFn: deleteProperty,
+    ...options,
+  });
+}

@@ -19,6 +19,7 @@ export const ENDPOINTS = {
   },
   PROPERTY : {
     LIST : `${API_PREFIX}/property`,
+    DELETE: `${API_PREFIX}/property/:id`,
   },
   CATEGORIES: {
     LIST: `${API_PREFIX}/categories`,

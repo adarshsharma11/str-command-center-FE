@@ -281,6 +281,133 @@ CREATE TABLE property_pricing_config (
 
 ---
 
+---
+
+## Round 3 — Clean Slate, Forecast Fix & Crew Pricing
+
+This round covers four backend tasks. The frontend for all of these is already built and merged — you just need the API/DB side.
+
+---
+
+### 1. Delete Property Endpoint
+
+Add a `DELETE /api/v1/property/:id` endpoint.
+
+- **Soft delete preferred** — add a `deleted_at TIMESTAMPTZ` column to the `properties` table (or mark `is_active = false`). Booking history tied to deleted properties must not be lost.
+- Return `{ success: true }` on success, appropriate error otherwise.
+- Frontend is ready: the Properties page has a delete button with a confirmation dialog, and the mutation hook (`useDeletePropertyMutation`) is already wired up in `src/lib/api/property.ts`.
+
+---
+
+### 2. Dashboard Property Filtering
+
+The `GET /api/v1/dashboard/extended` endpoint currently aggregates data across **all** bookings, including bookings for properties that were parsed from emails but never formally added to the Properties tab.
+
+**Required change:** All dashboard queries must JOIN against the `properties` table and only include data where the booking's property matches a registered, non-deleted property.
+
+Rules:
+- If a property was parsed from an email but hasn't been added to the Properties tab → exclude its data from the dashboard.
+- If a property has been soft-deleted (`deleted_at IS NOT NULL`) → exclude its data from the dashboard.
+
+**Affected response fields** (all of them need the property filter):
+- `total_revenue`
+- `property_revenue`
+- `service_revenue`
+- `active_bookings`
+- `average_daily_rate`
+- `overall_occupancy_rate`
+- `revenue_forecast`
+- `revenue_trends`
+- `occupancy_by_property`
+- `revenue_by_channel`
+- `payment_collection`
+- `upcoming_check_ins`
+- `upcoming_check_outs`
+- `top_performing_properties`
+- `luxury_services_revenue`
+- `guest_origins`
+- `priority_tasks`
+
+---
+
+### 3. Revenue Forecast Fix
+
+The current implementation fakes the forecast numbers using multipliers (30d actual, 60d = actual × 0.6, 90d = actual × 0.3). Replace this with real future-looking queries.
+
+**Required logic:**
+
+```sql
+-- 30-day confirmed revenue
+SELECT COALESCE(SUM(total_amount), 0) AS confirmed_revenue,
+       COUNT(*) AS bookings_count
+FROM bookings
+WHERE check_in_date BETWEEN NOW() AND NOW() + INTERVAL '30 days'
+  AND property_id IN (SELECT id FROM properties WHERE deleted_at IS NULL);
+
+-- Same pattern for 60-day and 90-day windows
+```
+
+Each forecast period object should contain:
+- `confirmed_revenue` — sum of `total_amount` for confirmed bookings in the window
+- `bookings_count` — count of those bookings
+- `potential_revenue` — sum of pending/unconfirmed bookings in the same window (if booking status tracking exists; otherwise return `0`)
+
+**Do not round** numbers to clean multiples — return actual amounts.
+
+The response shape stays the same:
+```json
+{
+  "revenue_forecast": [
+    { "period": "30d", "confirmed_revenue": 12345.67, "bookings_count": 8, "potential_revenue": 0 },
+    { "period": "60d", "confirmed_revenue": 23456.78, "bookings_count": 15, "potential_revenue": 0 },
+    { "period": "90d", "confirmed_revenue": 31000.00, "bookings_count": 21, "potential_revenue": 0 }
+  ]
+}
+```
+
+---
+
+### 4. Crews Table: Add Price & Time Columns
+
+The Crews page now displays `price` and `time` fields on both category headers and individual member rows. The edit dialog also lets users set these values. The backend needs to store them.
+
+**Database migration:**
+```sql
+ALTER TABLE crews ADD COLUMN price VARCHAR DEFAULT NULL;
+ALTER TABLE crews ADD COLUMN time VARCHAR DEFAULT NULL;
+```
+
+These are free-text strings (e.g., `"$150"`, `"2 hours"`) — not numeric — because they are display-only values set by the user.
+
+**Endpoints to update:**
+
+| Endpoint | Change |
+|----------|--------|
+| `POST /api/v1/crews` | Accept `price` and `time` in request body |
+| `PATCH /api/v1/crews/:id` | Accept `price` and `time` in request body |
+| `GET /api/v1/categories/tree` | Include `price` and `time` in each crew object |
+
+Frontend is ready: `EditMemberDialog` and `Crews.tsx` already send and display these fields. The `CrewApiItem` type in `src/lib/api/crew.ts` includes `price` and `time`.
+
+---
+
+### Frontend Files Modified in This PR
+
+These are the files changed on the frontend side for this round — listed here so you know what's already done:
+
+| File | What changed |
+|------|-------------|
+| `src/lib/api/endpoints.ts` | Added property DELETE endpoint constant |
+| `src/lib/api/property.ts` | Added `deleteProperty()` function and `useDeletePropertyMutation` hook |
+| `src/pages/Properties.tsx` | Added delete button with confirmation dialog |
+| `src/lib/api/crew.ts` | Added `price` and `time` to `CrewApiItem` type |
+| `src/components/crews/EditMemberDialog.tsx` | Added price/time input fields |
+| `src/pages/Crews.tsx` | Displays price/time on category headers and member rows |
+| `src/types/index.ts` | Added `price` and `time` to `CrewMember` interface |
+| `index.html` | Updated favicon, removed Lovable references |
+
+---
+
 ## Questions?
 
 All the mock data structures mirror exactly what the API should return. Use them as your API contract.

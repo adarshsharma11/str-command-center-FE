@@ -176,6 +176,8 @@ export interface CrewMember {
     email: string;
     phone: string;
   };
+  price?: string | null;
+  time?: string | null;
 }
 
 export interface CalendarEvent {

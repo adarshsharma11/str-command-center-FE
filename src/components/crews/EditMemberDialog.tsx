@@ -13,6 +13,8 @@ const memberSchema = yup.object({
   role: yup.string().required('Role is required').min(2, 'Role must be at least 2 characters'),
   email: yup.string().email('Please enter a valid email address').required('Email is required'),
   phone: yup.string().required('Phone number is required').min(10, 'Phone number must be at least 10 characters'),
+  price: yup.string().optional().nullable(),
+  time: yup.string().optional().nullable(),
 });
 
 type MemberFormData = yup.InferType<typeof memberSchema>;
@@ -38,6 +40,8 @@ export function EditMemberDialog({ member, open, onOpenChange, onSave, mode = 'e
       role: '',
       email: '',
       phone: '',
+      price: '',
+      time: '',
     },
   });
 
@@ -50,6 +54,8 @@ export function EditMemberDialog({ member, open, onOpenChange, onSave, mode = 'e
           role: member.role,
           email: member.contactInfo.email,
           phone: member.contactInfo.phone,
+          price: member.price || '',
+          time: member.time || '',
         });
       } else {
         reset({
@@ -57,6 +63,8 @@ export function EditMemberDialog({ member, open, onOpenChange, onSave, mode = 'e
           role: '',
           email: '',
           phone: '',
+          price: '',
+          time: '',
         });
       }
     }
@@ -72,6 +80,8 @@ export function EditMemberDialog({ member, open, onOpenChange, onSave, mode = 'e
       role: data.role,
       order: memberOrder,
       contactInfo: { email: data.email, phone: data.phone },
+      price: data.price || null,
+      time: data.time || null,
     });
     onOpenChange(false);
   };
@@ -132,6 +142,24 @@ export function EditMemberDialog({ member, open, onOpenChange, onSave, mode = 'e
             {errors.phone && (
               <p className="text-sm text-destructive">{errors.phone.message}</p>
             )}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price">Hourly Rate ($)</Label>
+              <Input
+                id="price"
+                {...register('price')}
+                placeholder="e.g., 150"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="time">Est. Duration</Label>
+              <Input
+                id="time"
+                {...register('time')}
+                placeholder="e.g., 2h, 45min"
+              />
+            </div>
           </div>
           <div className="flex gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">

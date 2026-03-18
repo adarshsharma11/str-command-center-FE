@@ -33,6 +33,7 @@ type CreateCrewFormData = yup.InferType<typeof createCrewSchema>;
 import type { CrewFolder, CrewMember } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCategoriesQuery, useCreateCategoryMutation, categoryUtils, useCategoryTreeQuery, type CategoryTreeNode } from '@/lib/api/category';
+import { useServiceCategoriesQuery } from '@/lib/api/service-category';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreateCrewMutation, useUpdateCrewMutation, useCrewsQuery, useDeleteCrewMutation, type CrewApiItem } from '@/lib/api/crew';
@@ -49,7 +50,9 @@ function flattenCategoryTree(nodes: CategoryTreeNode[], parentId: string | null 
       contactInfo: {
         email: c.email,
         phone: c.phone
-      }
+      },
+      price: c.price || null,
+      time: c.time || null,
     }));
     
     result.push({
@@ -84,8 +87,17 @@ export default function Crews() {
   const queryClient = useQueryClient();
   const { data: categoriesResp, isLoading: categoriesLoading } = useCategoriesQuery(1, 100);
   const { data: treeResp, isLoading: treeLoading } = useCategoryTreeQuery();
+  const { data: serviceCategoriesResp } = useServiceCategoriesQuery();
 
   const isLoading = categoriesLoading || treeLoading;
+
+  // Build a lookup map from service category name -> { price, time }
+  const serviceCategoryMap = new Map<string, { price?: string | null; time?: string | null }>();
+  if (serviceCategoriesResp?.data) {
+    for (const sc of serviceCategoriesResp.data) {
+      serviceCategoryMap.set(sc.category_name.toLowerCase(), { price: sc.price, time: sc.time });
+    }
+  }
 
   useEffect(() => {
     if (!treeResp?.data?.tree) return;
@@ -111,6 +123,8 @@ export default function Crews() {
           role: apiCrew.role,
           order: nextOrder,
           contactInfo: { email: apiCrew.email, phone: apiCrew.phone },
+          price: apiCrew.price || null,
+          time: apiCrew.time || null,
         };
         return { ...f, members: [...f.members, newMember] };
       }));
@@ -153,6 +167,8 @@ export default function Crews() {
           name: apiCrew.name,
           role: apiCrew.role,
           contactInfo: { email: apiCrew.email, phone: apiCrew.phone },
+          price: apiCrew.price || null,
+          time: apiCrew.time || null,
         } : m),
       })));
       setEditingMember(null);
@@ -220,6 +236,8 @@ export default function Crews() {
         phone: updatedMember.contactInfo.phone,
         role: updatedMember.role,
         category_id: selectedCategoryId,
+        price: updatedMember.price || null,
+        time: updatedMember.time || null,
       });
       return;
     }
@@ -232,6 +250,8 @@ export default function Crews() {
           name: updatedMember.name,
           phone: updatedMember.contactInfo.phone,
           role: updatedMember.role,
+          price: updatedMember.price || null,
+          time: updatedMember.time || null,
         },
       });
     } else {
@@ -282,6 +302,7 @@ export default function Crews() {
     const children = getFolderChildren(folder.id);
     const isExpanded = expandedFolders.has(folder.id);
     const hasChildren = children.length > 0 || folder.members.length > 0;
+    const categoryDefaults = serviceCategoryMap.get(folder.name.toLowerCase());
 
     return (
       <div key={folder.id} className="space-y-1">
@@ -300,6 +321,12 @@ export default function Crews() {
           ) : <div className="w-4" />}
           {isExpanded ? <FolderOpen className="h-4 w-4 text-primary" /> : <Folder className="h-4 w-4 text-muted-foreground" />}
           <span className="font-medium text-foreground">{folder.name}</span>
+          {categoryDefaults && (categoryDefaults.price || categoryDefaults.time) && (
+            <span className="text-sm text-muted-foreground">
+              {categoryDefaults.price ? ` · $${categoryDefaults.price}` : ''}
+              {categoryDefaults.time ? ` · ~${categoryDefaults.time}` : ''}
+            </span>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -349,6 +376,22 @@ export default function Crews() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground text-sm">{member.name}</p>
                   <p className="text-xs text-muted-foreground">{member.role}</p>
+                  {(() => {
+                    const hasOwnPrice = !!member.price;
+                    const hasOwnTime = !!member.time;
+                    const effectivePrice = member.price || categoryDefaults?.price;
+                    const effectiveTime = member.time || categoryDefaults?.time;
+                    if (!effectivePrice && !effectiveTime) return null;
+                    const isDefault = !hasOwnPrice && !hasOwnTime;
+                    return (
+                      <p className={`text-xs ${isDefault ? 'italic text-muted-foreground/70' : 'text-muted-foreground'}`}>
+                        {effectivePrice ? `$${effectivePrice}/hr` : ''}
+                        {effectivePrice && effectiveTime ? ' · ' : ''}
+                        {effectiveTime ? `~${effectiveTime}` : ''}
+                        {isDefault ? ' (default)' : ''}
+                      </p>
+                    );
+                  })()}
                 </div>
                 <div className="text-xs text-muted-foreground hidden md:block">{member.contactInfo.phone}</div>
                 <Button
