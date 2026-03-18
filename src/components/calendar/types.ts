@@ -25,6 +25,7 @@ export interface CalendarBooking {
   guestPhone?: string;
   totalAmount?: number;
   notes?: string;
+  tasks?: VendorTask[];
 }
 
 export interface VendorTask {

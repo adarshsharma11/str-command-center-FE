@@ -40,7 +40,7 @@ export function CalendarSidePanel({ booking, tasks, onClose }: CalendarSidePanel
   if (!booking) return null;
 
   const nights = differenceInDays(booking.checkOut, booking.checkIn);
-  const relatedTasks = tasks.filter(t => t.bookingId === booking.id);
+  const relatedTasks = booking.tasks || tasks.filter(t => t.bookingId === booking.id);
 
   return (
     <div className="w-80 border-l border-border bg-card animate-slide-in-right">
@@ -55,9 +55,18 @@ export function CalendarSidePanel({ booking, tasks, onClose }: CalendarSidePanel
         <div className="p-4 space-y-6">
           {/* Property & Status */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Home size={18} className="text-muted-foreground" />
-              <span className="font-medium text-foreground">{booking.propertyName}</span>
+            <div className="flex items-start justify-between">
+              <div className="space-y-1 flex-1">
+                <div className="flex items-center gap-2">
+                  <Home size={18} className="text-muted-foreground" />
+                  <span className="font-medium text-foreground">{booking.propertyName}</span>
+                </div>
+                {booking.totalAmount !== undefined && booking.totalAmount > 0 && (
+                  <p className="text-xl font-bold text-emerald-600 ml-6">
+                    ${booking.totalAmount.toLocaleString()}
+                  </p>
+                )}
+              </div>
             </div>
             
             <div className="flex items-center gap-2">

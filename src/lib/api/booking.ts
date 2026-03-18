@@ -23,7 +23,16 @@ type BookingApiItem = {
   number_of_guests?: number;
   guest_email?: string;
   guest_phone?: string;
-  
+  tasks?: Array<{
+    task_id: string;
+    scheduled_date?: string;
+    scheduledTime?: string;
+    status?: string;
+    crews?: {
+      property_id?: string;
+      name?: string;
+    };
+  }>;
 };
 
 type BookingApiResponse = {
@@ -113,13 +122,14 @@ export function toCalendarBooking(apiBooking: BookingApiItem): CalendarBooking {
     checkIn: parseAsLocalTime(apiBooking.check_in_date || apiBooking.check_in || apiBooking.created_at),
     checkOut: parseAsLocalTime(apiBooking.check_out_date || apiBooking.check_out || apiBooking.created_at),
     channel: normalizedPlatform as 'airbnb' | 'vrbo' | 'direct' | 'booking',
-    status: apiBooking.reservation_id === 'confirmed' ? 'confirmed' : 'pending',
+    status: apiBooking.reservation_status === 'confirmed' ? 'confirmed' : 'pending',
     paymentStatus: (apiBooking.total_amount === 0 || !apiBooking.total_amount) ? 'pending' : 'paid',
     guestCount: apiBooking.number_of_guests || 1,
     guestEmail: apiBooking.guest_email || undefined,
     guestPhone: apiBooking.guest_phone || undefined,
     totalAmount: apiBooking.total_amount || 0,
     notes: `Booking from ${apiBooking.platform}`,
+    tasks: apiBooking.tasks?.map(task => toVendorTask(task, apiBooking.reservation_id, apiBooking.property_name)),
   };
 }
 
@@ -128,11 +138,17 @@ export function toVendorTask(apiTask: {
   task_id: string;
   scheduled_date?: string;
   scheduledTime?: string;
+  status?: string;
   crews?: {
     property_id?: string;
     name?: string;
   };
 }, bookingId: string, propertyName?: string): VendorTask {
+  // Map backend status to frontend VendorTask status
+  let status: VendorTask['status'] = 'scheduled';
+  if (apiTask.status === 'completed') status = 'completed';
+  else if (apiTask.status === 'accepted') status = 'in-progress';
+  
   return {
     id: `task-${apiTask.task_id}`,
     bookingId: bookingId,
@@ -142,7 +158,7 @@ export function toVendorTask(apiTask: {
     type: 'cleaning',
     scheduledTime: parseAsLocalTime(apiTask.scheduled_date || apiTask.scheduledTime),
     duration: 60,
-    status: 'scheduled',
+    status,
     notes: '',
   };
 }

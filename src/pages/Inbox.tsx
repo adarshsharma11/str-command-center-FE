@@ -17,7 +17,7 @@ export default function Inbox() {
   const [threads, setThreads] = useState<InboxThread[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedThread, setSelectedThread] = useState<InboxThread | null>(null);
-  const [filters, setFilters] = useState<InboxFilters>({ folder: 'BOTH', limit: 50, only_booking: false });
+  const [filters, setFilters] = useState<InboxFilters>({ folder: 'BOTH', limit: 10, only_booking: false });
   const { data: inboxResp, isLoading, error, refetch } = useInboxQuery(filters);
   const queryClient = useQueryClient();
 
