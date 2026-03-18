@@ -5,7 +5,7 @@ import { getToken } from '@/lib/auth/token';
 export default function PrivateRoute() {
   const { token, isDevMode } = useAuth();
 
-  // In dev mode, bypass authentication
+  // In dev mode or demo mode, bypass authentication — Added by Agent 3
   if (isDevMode) {
     return <Outlet />;
   }

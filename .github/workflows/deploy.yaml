@@ -18,6 +18,6 @@ jobs:
           script: |
             cd /var/www/app/str-command-center-FE
             git pull origin main
-            npm run install
+            npm install
             npm run build
             systemctl reload nginx

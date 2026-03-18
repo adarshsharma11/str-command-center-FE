@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, CalendarIcon, Download, Mail, Clock, Filter, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -12,6 +13,9 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { downloadReportPDF } from '@/lib/utils/pdfDownload';
+import { useAllPropertiesQuery } from '@/lib/api/property';
+import { apiClient } from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ReportType, ReportFilters as ReportFiltersType } from '@/types/reports';
 import type { UseDateRangeFilterReturn, DateRangePreset } from '@/hooks/useDateRangeFilter';
 
@@ -27,22 +31,6 @@ interface ReportFiltersProps {
   onEmail: () => void;
   filters: ReportFiltersType;
 }
-
-// TODO: [ADARSH] Replace with actual API call to fetch properties
-const MOCK_PROPERTIES = [
-  { id: '1', name: 'Ocean View Villa' },
-  { id: '2', name: 'Mountain Retreat' },
-  { id: '3', name: 'Downtown Loft' },
-  { id: '4', name: 'Beachfront Condo' },
-  { id: '5', name: 'Lakeside Cabin' },
-];
-
-// TODO: [ADARSH] Replace with actual API call to fetch owners
-const MOCK_OWNERS = [
-  { id: 'owner-1', name: 'Robert Williams' },
-  { id: 'owner-2', name: 'Sarah Johnson' },
-  { id: 'owner-3', name: 'Michael Chen' },
-];
 
 const REPORT_TITLES: Record<ReportType, string> = {
   'owner-statement': 'Owner Statement',
@@ -67,6 +55,21 @@ export function ReportFilters({
 }: ReportFiltersProps) {
   const { dateRange, preset, setPreset, setDateRange, presets } = dateFilter;
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Fetch real properties from API
+  const { data: propertiesData } = useAllPropertiesQuery();
+  const properties = propertiesData?.data?.map(p => ({ id: String(p.id), name: p.name || 'Unnamed' })) || [];
+
+  // Fetch real owners from API
+  const { data: ownersData } = useQuery<{ success: boolean; data: { id: number; first_name?: string; last_name?: string; email?: string }[] }>({
+    queryKey: ['owners'],
+    queryFn: () => apiClient.get(ENDPOINTS.AUTH.OWNERS),
+    staleTime: 5 * 60_000,
+  });
+  const owners = ownersData?.data?.map(o => ({
+    id: String(o.id),
+    name: [o.first_name, o.last_name].filter(Boolean).join(' ') || o.email || `Owner ${o.id}`,
+  })) || [];
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -208,7 +211,7 @@ export function ReportFilters({
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {MOCK_PROPERTIES.map((property) => (
+              {properties.map((property) => (
                 <label
                   key={property.id}
                   className={cn(
@@ -246,7 +249,7 @@ export function ReportFilters({
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {MOCK_OWNERS.map((owner) => (
+              {owners.map((owner) => (
                 <label
                   key={owner.id}
                   className={cn(

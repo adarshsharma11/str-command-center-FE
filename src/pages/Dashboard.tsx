@@ -102,7 +102,7 @@ export default function Dashboard() {
   ];
 
   // Map API tasks to Task interface
-  const tasks: Task[] = data.priority_tasks.map((t) => ({
+  const tasks: Task[] = (data.priority_tasks ?? []).map((t) => ({
     id: t.id.toString(),
     title: t.title,
     type: t.type as TaskType,
@@ -148,16 +148,16 @@ export default function Dashboard() {
 
         {/* Revenue Forecast + Payment Status Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RevenueForecastCard forecast={data.revenue_forecast} />
-          <PaymentStatusCard payments={data.payment_collection} />
+          <RevenueForecastCard forecast={data.revenue_forecast ?? []} />
+          <PaymentStatusCard payments={data.payment_collection ?? { paid: 0, partial: 0, pending: 0, total: 0 }} />
         </div>
 
         {/* Revenue Trends - Full Width */}
         {isSectionVisible('revenueTrends') && (
           <DashboardSection title="Revenue Trends" description="Compare revenue with same period last year">
             <RevenueTrendChart
-              currentPeriod={data.revenue_trends.current_period}
-              lastYearPeriod={data.revenue_trends.last_year_period}
+              currentPeriod={data.revenue_trends?.current_period ?? []}
+              lastYearPeriod={data.revenue_trends?.last_year_period ?? []}
             />
           </DashboardSection>
         )}
@@ -166,13 +166,13 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {isSectionVisible('occupancyByProperty') && (
             <DashboardSection title="Occupancy by Property" description="Property occupancy rates this period">
-              <OccupancyChart data={data.occupancy_by_property} />
+              <OccupancyChart data={data.occupancy_by_property ?? []} />
             </DashboardSection>
           )}
 
           {isSectionVisible('revenueByChannel') && (
             <DashboardSection title="Revenue by Channel" description="Booking platform distribution">
-              <RevenueByChannelChart data={data.revenue_by_channel} />
+              <RevenueByChannelChart data={data.revenue_by_channel ?? []} />
             </DashboardSection>
           )}
         </div>
@@ -181,8 +181,8 @@ export default function Dashboard() {
         {isSectionVisible('upcomingEvents') && (
           <DashboardSection title="Upcoming Check-ins & Check-outs" description="Today and tomorrow's arrivals and departures">
             <UpcomingEventsWidget
-              checkIns={data.upcoming_check_ins}
-              checkOuts={data.upcoming_check_outs}
+              checkIns={data.upcoming_check_ins ?? []}
+              checkOuts={data.upcoming_check_outs ?? []}
             />
           </DashboardSection>
         )}

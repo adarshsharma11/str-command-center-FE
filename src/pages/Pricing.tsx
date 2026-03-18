@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,23 +57,14 @@ import {
   isBefore,
   startOfDay,
 } from 'date-fns';
+import { useAllPropertiesQuery } from '@/lib/api/property';
+import { useBookingsQuery } from '@/lib/api/booking';
 
-// Mock properties - TODO: [ADARSH] Replace with actual API call
-const MOCK_PROPERTIES = [
-  { id: '1', name: 'Ocean View Villa', basePrice: 450, bedrooms: 4 },
-  { id: '2', name: 'Mountain Retreat', basePrice: 600, bedrooms: 5 },
-  { id: '3', name: 'Downtown Loft', basePrice: 250, bedrooms: 2 },
-  { id: '4', name: 'Beachfront Condo', basePrice: 350, bedrooms: 3 },
-  { id: '5', name: 'Lakeside Cabin', basePrice: 280, bedrooms: 3 },
-];
-
-// Mock booked dates per property - TODO: [ADARSH] Replace with actual booking data
-const MOCK_BOOKED_DATES: Record<string, string[]> = {
-  '1': ['2026-02-14', '2026-02-15', '2026-02-20', '2026-02-21', '2026-02-22', '2026-03-05', '2026-03-06', '2026-03-07'],
-  '2': ['2026-02-10', '2026-02-11', '2026-02-12', '2026-02-28', '2026-03-01'],
-  '3': ['2026-02-13', '2026-02-14', '2026-02-15', '2026-02-16', '2026-03-10', '2026-03-11'],
-  '4': ['2026-02-09', '2026-02-10', '2026-02-25', '2026-02-26', '2026-02-27'],
-  '5': ['2026-02-17', '2026-02-18', '2026-02-19', '2026-03-02', '2026-03-03'],
+type PricingProperty = {
+  id: string;
+  name: string;
+  basePrice: number;
+  bedrooms: number;
 };
 
 // Seasonality configuration (month -> multiplier)
@@ -290,7 +281,7 @@ function PricingCalendar({
   currentMonth,
   bookedDates,
 }: {
-  property: typeof MOCK_PROPERTIES[0];
+  property: PricingProperty;
   currentMonth: Date;
   bookedDates: string[];
 }) {
@@ -353,30 +344,101 @@ function PricingCalendar({
 }
 
 export default function Pricing() {
-  const [selectedProperty, setSelectedProperty] = useState(MOCK_PROPERTIES[0]);
+  const [selectedProperty, setSelectedProperty] = useState<PricingProperty | null>(null);
   const [config, setConfig] = useState<PricingConfig>(DEFAULT_CONFIG);
   const [autoSync, setAutoSync] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const bookedDates = MOCK_BOOKED_DATES[selectedProperty.id] || [];
+  // Fetch real properties
+  const { data: propertiesData, isLoading: propertiesLoading } = useAllPropertiesQuery();
+  const properties: PricingProperty[] = useMemo(() => {
+    if (!propertiesData?.data) return [];
+    const items = Array.isArray(propertiesData.data) ? propertiesData.data : [];
+    return items.map(p => ({
+      id: String(p.id),
+      name: p.name || 'Unnamed Property',
+      basePrice: p.base_price || 200,
+      bedrooms: p.bedrooms || 1,
+    }));
+  }, [propertiesData]);
+
+  // Auto-select first property when data loads
+  useEffect(() => {
+    if (properties.length > 0 && !selectedProperty) {
+      setSelectedProperty(properties[0]);
+    }
+  }, [properties, selectedProperty]);
+
+  // Fetch real bookings and build booked dates map
+  const { data: bookingsData } = useBookingsQuery(1, 500);
+  const bookedDatesMap: Record<string, string[]> = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    if (!bookingsData?.data?.bookings) return map;
+    for (const b of bookingsData.data.bookings) {
+      const propId = b.property_id || '';
+      if (!propId) continue;
+      const checkIn = b.check_in_date || b.check_in;
+      const checkOut = b.check_out_date || b.check_out;
+      if (!checkIn || !checkOut) continue;
+      try {
+        const start = new Date(checkIn);
+        const end = new Date(checkOut);
+        const days = eachDayOfInterval({ start, end: addDays(end, -1) });
+        if (!map[propId]) map[propId] = [];
+        for (const d of days) {
+          map[propId].push(format(d, 'yyyy-MM-dd'));
+        }
+      } catch { /* skip invalid dates */ }
+    }
+    return map;
+  }, [bookingsData]);
+
+  const currentProperty = selectedProperty || properties[0];
+  const bookedDates = currentProperty ? (bookedDatesMap[currentProperty.id] || []) : [];
+
+  if (propertiesLoading) {
+    return (
+      <Layout>
+        <div className="p-6 space-y-6">
+          <div className="h-7 w-48 bg-muted rounded animate-pulse" />
+          <div className="h-4 w-64 bg-muted rounded animate-pulse" />
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {[0, 1, 2, 3].map((i) => (
+              <Card key={i}><CardContent className="pt-6"><div className="h-32 bg-muted rounded animate-pulse" /></CardContent></Card>
+            ))}
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!currentProperty) {
+    return (
+      <Layout>
+        <div className="p-6">
+          <p className="text-muted-foreground">No properties found. Add a property first.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   // Generate next 14 days of pricing
   const pricingPreview = useMemo(() => {
     const today = new Date();
     return Array.from({ length: 14 }, (_, i) => {
       const date = addDays(today, i);
-      const manual = calculateManualPrice(selectedProperty.basePrice, date, config, bookedDates);
-      const ai = calculateAIPrice(selectedProperty.basePrice, date);
+      const manual = calculateManualPrice(currentProperty.basePrice, date, config, bookedDates);
+      const ai = calculateAIPrice(currentProperty.basePrice, date);
       return { date, ...manual, aiPrice: ai.price, aiFactors: ai.factors };
     });
-  }, [selectedProperty, config, bookedDates]);
+  }, [currentProperty, config, bookedDates]);
 
   const avgOptimizedPrice = Math.round(
     pricingPreview.reduce((sum, p) => sum + p.price, 0) / pricingPreview.length
   );
 
   const potentialRevenue = avgOptimizedPrice * 30 * 0.75;
-  const baselineRevenue = selectedProperty.basePrice * 30 * 0.75;
+  const baselineRevenue = currentProperty.basePrice * 30 * 0.75;
   const revenueIncrease = ((potentialRevenue - baselineRevenue) / baselineRevenue) * 100;
 
   return (
@@ -427,12 +489,12 @@ export default function Pricing() {
                   <CardTitle className="text-base">Select Property</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  {MOCK_PROPERTIES.map((p) => (
+                  {properties.map((p) => (
                     <button
                       key={p.id}
                       onClick={() => setSelectedProperty(p)}
                       className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                        selectedProperty.id === p.id
+                        currentProperty.id === p.id
                           ? 'border-primary bg-primary/10'
                           : 'border-muted hover:border-primary/50'
                       }`}
@@ -453,7 +515,7 @@ export default function Pricing() {
                     <div>
                       <CardTitle className="text-base flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-yellow-500" />
-                        AI-Optimized Prices - {selectedProperty.name}
+                        AI-Optimized Prices - {currentProperty.name}
                       </CardTitle>
                       <CardDescription>
                         Prices calculated based on seasonality, day of week, and demand
@@ -482,7 +544,7 @@ export default function Pricing() {
                 </CardHeader>
                 <CardContent>
                   <PricingCalendar
-                    property={selectedProperty}
+                    property={currentProperty}
                     currentMonth={currentMonth}
                     bookedDates={bookedDates}
                   />
@@ -555,16 +617,17 @@ export default function Pricing() {
                   </CardHeader>
                   <CardContent>
                     <Select
-                      value={selectedProperty.id}
-                      onValueChange={(id) =>
-                        setSelectedProperty(MOCK_PROPERTIES.find((p) => p.id === id)!)
-                      }
+                      value={currentProperty.id}
+                      onValueChange={(id) => {
+                        const found = properties.find((p) => p.id === id);
+                        if (found) setSelectedProperty(found);
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {MOCK_PROPERTIES.map((p) => (
+                        {properties.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
                             {p.name} - {formatCurrency(p.basePrice)}/night
                           </SelectItem>
@@ -574,7 +637,7 @@ export default function Pricing() {
                     <div className="mt-4 p-3 bg-muted rounded-lg">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Base Price</span>
-                        <span className="font-medium">{formatCurrency(selectedProperty.basePrice)}</span>
+                        <span className="font-medium">{formatCurrency(currentProperty.basePrice)}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -736,7 +799,7 @@ export default function Pricing() {
                       </div>
                       <p className="text-2xl font-bold mt-2">{formatCurrency(avgOptimizedPrice)}</p>
                       <p className="text-xs text-muted-foreground">
-                        vs {formatCurrency(selectedProperty.basePrice)} base
+                        vs {formatCurrency(currentProperty.basePrice)} base
                       </p>
                     </CardContent>
                   </Card>
@@ -798,10 +861,10 @@ export default function Pricing() {
                       </TableHeader>
                       <TableBody>
                         {pricingPreview.map(({ date, price, factors, aiPrice, isIsland }) => {
-                          const diff = price - selectedProperty.basePrice;
-                          const diffPct = ((diff / selectedProperty.basePrice) * 100).toFixed(0);
-                          const aiDiff = aiPrice - selectedProperty.basePrice;
-                          const aiDiffPct = ((aiDiff / selectedProperty.basePrice) * 100).toFixed(0);
+                          const diff = price - currentProperty.basePrice;
+                          const diffPct = ((diff / currentProperty.basePrice) * 100).toFixed(0);
+                          const aiDiff = aiPrice - currentProperty.basePrice;
+                          const aiDiffPct = ((aiDiff / currentProperty.basePrice) * 100).toFixed(0);
                           return (
                             <TableRow key={date.toISOString()} className={isIsland ? 'bg-purple-50/50 dark:bg-purple-900/10' : ''}>
                               <TableCell className="font-medium">
@@ -810,7 +873,7 @@ export default function Pricing() {
                               </TableCell>
                               <TableCell>{format(date, 'EEE')}</TableCell>
                               <TableCell className="text-right text-muted-foreground">
-                                {formatCurrency(selectedProperty.basePrice)}
+                                {formatCurrency(currentProperty.basePrice)}
                               </TableCell>
                               <TableCell className="text-right">
                                 <span className="text-yellow-600">{formatCurrency(aiPrice)}</span>

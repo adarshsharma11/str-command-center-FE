@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { NavLink } from '@/components/NavLink';
-import { LayoutDashboard, Calendar, Inbox, Users, Zap, Home, BookOpen, FileBarChart, DollarSign, Settings, LogOut, FlaskConical } from 'lucide-react';
+import { LayoutDashboard, Calendar, Inbox, Users, Zap, Home, BookOpen, FileBarChart, DollarSign, Settings, LogOut, FlaskConical, Send } from 'lucide-react'; // Added Send — Agent 3
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
@@ -43,6 +43,10 @@ const navItems = [{
   icon: BookOpen,
   label: 'Bookings'
 }, {
+  to: '/dispatch',
+  icon: Send,
+  label: 'Dispatch' // Added by Agent 3
+}, {
   to: '/reports',
   icon: FileBarChart,
   label: 'Reports'
@@ -76,7 +80,7 @@ export function Layout({
           <h1 className="text-xl font-bold text-primary">MOMA.HOUSE CRM</h1>
           {isDevMode && (
             <Badge variant="destructive" className="text-xs">
-              DEV MODE
+              {localStorage.getItem('demo_mode') === 'true' ? 'DEMO' : 'DEV MODE'}
             </Badge>
           )}
         </div>
@@ -108,6 +112,12 @@ export function Layout({
 
       {/* Main Content */}
       <main className="flex-1 md:pl-64">
+        {/* Added by Agent 3 — Demo mode banner */}
+        {localStorage.getItem('demo_mode') === 'true' && (
+          <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-center text-sm text-amber-700 dark:text-amber-400">
+            Demo Mode — Data is simulated
+          </div>
+        )}
         <div className="pb-20 md:pb-0">
           {children}
         </div>

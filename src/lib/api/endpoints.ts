@@ -4,6 +4,7 @@ export const ENDPOINTS = {
   AUTH: {
     LOGIN: `${API_PREFIX}/auth/login`,
     REGISTER: `${API_PREFIX}/auth/register`,
+    OWNERS: `${API_PREFIX}/auth/owners`,
   },
   BOOKING : {
     LIST : `${API_PREFIX}/bookings`,
@@ -54,6 +55,13 @@ export const ENDPOINTS = {
     SENT: `${API_PREFIX}/emails/sent`,
     DETAIL: `${API_PREFIX}/emails/:id`,
     REPLY: `${API_PREFIX}/emails/:id/reply`,
+  },
+  // Added by Agent 2
+  SERVICE_BOOKINGS: {
+    STATUS: `${API_PREFIX}/service-bookings/status`,
+    RESPOND: `${API_PREFIX}/service-bookings/respond`,
+    RESPONSES: `${API_PREFIX}/service-bookings/responses`,
+    RESPONSES_STREAM: `${API_PREFIX}/service-bookings/responses/stream`,
   },
   INTEGRATIONS: {
     // User endpoints

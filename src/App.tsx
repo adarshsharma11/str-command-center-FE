@@ -17,6 +17,8 @@ import Reports from "./pages/Reports";
 import Pricing from "./pages/Pricing";
 import Settings from "./pages/Settings";
 import Testing from "./pages/Testing"; // New testing page for developers
+import ServiceDispatch from "./pages/ServiceDispatch"; // Added by Agent 3
+import ProviderResponse from "./pages/ProviderResponse"; // Added by Agent 3
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/context/AuthContext";
 import PrivateRoute from "@/components/PrivateRoute";
@@ -93,8 +95,12 @@ const App = () => (
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/testing" element={<Testing />} /> {/* Developer testing page */}
+              <Route path="/dispatch" element={<ServiceDispatch />} /> {/* Added by Agent 3 */}
             </Route>
-            
+
+            {/* Public route for service providers — no auth required. Added by Agent 3 */}
+            <Route path="/provider-response" element={<ProviderResponse />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

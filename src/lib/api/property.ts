@@ -3,7 +3,7 @@ import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import * as yup from 'yup';
 
-type PropertyApiItem = {
+export type PropertyApiItem = {
   id: number;
   name?: string;
   address?: string;
@@ -14,6 +14,9 @@ type PropertyApiItem = {
   vrbo_id?: string;
   booking_id?: string;
   ical_feed_url?: string;
+  base_price?: number;
+  bedrooms?: number;
+  owner_id?: number;
 };
 
 type PropertyListResponse = {
@@ -65,11 +68,8 @@ function toPropertyListings(p: PropertyApiItem): PropertyListingView[] {
   };
   const rows: PropertyListingView[] = [];
   
-  // Check for actual platform IDs (not null or empty strings)
-  console.log('Checking Airbnb ID:', p.airbnb_id, 'Valid:', p.airbnb_id && p.airbnb_id !== 'null' && p.airbnb_id.trim() !== '');
   if (p.airbnb_id && p.airbnb_id !== 'null' && p.airbnb_id.trim() !== '') {
-    console.log('Adding Airbnb listing');
-    rows.push({ 
+    rows.push({
       id: `${p.id}-airbnb`, 
       platformName: 'Airbnb', 
       platformListingId: p.airbnb_id, 
@@ -78,10 +78,8 @@ function toPropertyListings(p: PropertyApiItem): PropertyListingView[] {
     });
   }
   
-  console.log('Checking Vrbo ID:', p.vrbo_id, 'Valid:', p.vrbo_id && p.vrbo_id !== 'null' && p.vrbo_id.trim() !== '');
   if (p.vrbo_id && p.vrbo_id !== 'null' && p.vrbo_id.trim() !== '') {
-    console.log('Adding Vrbo listing');
-    rows.push({ 
+    rows.push({
       id: `${p.id}-vrbo`, 
       platformName: 'Vrbo', 
       platformListingId: p.vrbo_id, 
@@ -90,10 +88,8 @@ function toPropertyListings(p: PropertyApiItem): PropertyListingView[] {
     });
   }
   
-  console.log('Checking Booking ID:', p.booking_id, 'Valid:', p.booking_id && p.booking_id !== 'null' && p.booking_id.trim() !== '');
   if (p.booking_id && p.booking_id !== 'null' && p.booking_id.trim() !== '') {
-    console.log('Adding Booking.com listing');
-    rows.push({ 
+    rows.push({
       id: `${p.id}-booking`, 
       platformName: 'Booking.com', 
       platformListingId: p.booking_id, 
@@ -102,15 +98,12 @@ function toPropertyListings(p: PropertyApiItem): PropertyListingView[] {
     });
   }
   
-  console.log('Final rows:', rows);
   return rows;
 }
 
 async function fetchProperties(page = 1, limit = 10): Promise<PropertyListResponse> {
   const qp = new URLSearchParams({ page: String(page), limit: String(limit) }).toString();
-  const response = await apiClient.get<PropertyListResponse>(`${ENDPOINTS.PROPERTY.LIST}?${qp}`);
-  console.log('API Response:', response);
-  return response;
+  return apiClient.get<PropertyListResponse>(`${ENDPOINTS.PROPERTY.LIST}?${qp}`);
 }
 
 export function usePropertiesQuery(page = 1, limit = 10, options?: QueryOptions<PropertyListResponse>) {
