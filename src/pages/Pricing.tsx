@@ -393,8 +393,29 @@ export default function Pricing() {
     return map;
   }, [bookingsData]);
 
-  const currentProperty = selectedProperty || properties[0];
+  const currentProperty = selectedProperty || properties[0] || null;
   const bookedDates = currentProperty ? (bookedDatesMap[currentProperty.id] || []) : [];
+
+  // Generate next 14 days of pricing (must be called before any early return)
+  const pricingPreview = useMemo(() => {
+    if (!currentProperty) return [];
+    const today = new Date();
+    return Array.from({ length: 14 }, (_, i) => {
+      const date = addDays(today, i);
+      const manual = calculateManualPrice(currentProperty.basePrice, date, config, bookedDates);
+      const ai = calculateAIPrice(currentProperty.basePrice, date);
+      return { date, ...manual, aiPrice: ai.price, aiFactors: ai.factors };
+    });
+  }, [currentProperty, config, bookedDates]);
+
+  const avgOptimizedPrice = pricingPreview.length > 0
+    ? Math.round(pricingPreview.reduce((sum, p) => sum + p.price, 0) / pricingPreview.length)
+    : 0;
+
+  const basePrice = currentProperty?.basePrice || 1;
+  const potentialRevenue = avgOptimizedPrice * 30 * 0.75;
+  const baselineRevenue = basePrice * 30 * 0.75;
+  const revenueIncrease = baselineRevenue > 0 ? ((potentialRevenue - baselineRevenue) / baselineRevenue) * 100 : 0;
 
   if (propertiesLoading) {
     return (
@@ -421,25 +442,6 @@ export default function Pricing() {
       </Layout>
     );
   }
-
-  // Generate next 14 days of pricing
-  const pricingPreview = useMemo(() => {
-    const today = new Date();
-    return Array.from({ length: 14 }, (_, i) => {
-      const date = addDays(today, i);
-      const manual = calculateManualPrice(currentProperty.basePrice, date, config, bookedDates);
-      const ai = calculateAIPrice(currentProperty.basePrice, date);
-      return { date, ...manual, aiPrice: ai.price, aiFactors: ai.factors };
-    });
-  }, [currentProperty, config, bookedDates]);
-
-  const avgOptimizedPrice = Math.round(
-    pricingPreview.reduce((sum, p) => sum + p.price, 0) / pricingPreview.length
-  );
-
-  const potentialRevenue = avgOptimizedPrice * 30 * 0.75;
-  const baselineRevenue = currentProperty.basePrice * 30 * 0.75;
-  const revenueIncrease = ((potentialRevenue - baselineRevenue) / baselineRevenue) * 100;
 
   return (
     <Layout>
