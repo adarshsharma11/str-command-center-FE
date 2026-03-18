@@ -116,7 +116,8 @@ export default function Bookings() {
                     <SelectItem value="all">All Platforms</SelectItem>
                     <SelectItem value="Airbnb">Airbnb</SelectItem>
                     <SelectItem value="Vrbo">Vrbo</SelectItem>
-                    <SelectItem value="Direct">Direct</SelectItem>
+                    <SelectItem value="Booking">Booking</SelectItem>
+                    <SelectItem value="Plumguide">Plumguide</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>

@@ -148,7 +148,12 @@ export type CreatePropertyPayload = {
   booking_id?: string;
   bedrooms?: number;
   base_price?: number;
-  owner_id?: number;
+  owner_id?: number | null;
+  // Fields for creating a new owner
+  new_owner_first_name?: string;
+  new_owner_last_name?: string;
+  new_owner_email?: string;
+  new_owner_password?: string;
 };
 
 type CreatePropertyResponse = {
@@ -188,10 +193,36 @@ export const createPropertySchema = yup.object({
     .min(1, 'Rooms cannot be less than 1'),
   base_price: yup.number()
     .required('Base price is required')
-    .min(100, 'Price cannot be less than $100'),
+    .min(50, 'Price must be greater than 49'),
   owner_id: yup.number()
     .optional()
     .nullable(),
+  new_owner_first_name: yup.string()
+    .when('owner_id', {
+      is: (val: unknown) => (val as number | null) === -1,
+      then: (schema) => schema.required('First name is required for new owner'),
+      otherwise: (schema) => schema.optional().nullable(),
+    }),
+  new_owner_last_name: yup.string()
+    .when('owner_id', {
+      is: (val: unknown) => (val as number | null) === -1,
+      then: (schema) => schema.required('Last name is required for new owner'),
+      otherwise: (schema) => schema.optional().nullable(),
+    }),
+  new_owner_email: yup.string()
+    .email('Invalid email address')
+    .when('owner_id', {
+      is: (val: unknown) => (val as number | null) === -1,
+      then: (schema) => schema.required('Email is required for new owner'),
+      otherwise: (schema) => schema.optional().nullable(),
+    }),
+  new_owner_password: yup.string()
+    .min(6, 'Password must be at least 6 characters')
+    .when('owner_id', {
+      is: (val: unknown) => (val as number | null) === -1,
+      then: (schema) => schema.required('Password is required for new owner'),
+      otherwise: (schema) => schema.optional().nullable(),
+    }),
   airbnb_id: yup.string()
     .optional()
     .max(50, 'Airbnb ID must not exceed 50 characters'),

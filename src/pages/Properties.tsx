@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +34,10 @@ type CreatePropertyFormData = {
   bedrooms: number;
   base_price: number;
   owner_id?: number | null;
+  new_owner_first_name?: string;
+  new_owner_last_name?: string;
+  new_owner_email?: string;
+  new_owner_password?: string;
   airbnb_id?: string;
   vrbo_id?: string;
   booking_id?: string;
@@ -55,7 +59,7 @@ export default function Properties() {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<CreatePropertyFormData>({
-    resolver: yupResolver(createPropertySchema) as unknown as any,
+    resolver: yupResolver(createPropertySchema) as unknown as Resolver<CreatePropertyFormData>,
     defaultValues: {
       name: '',
       address: '',
@@ -138,7 +142,7 @@ export default function Properties() {
     Maintenance: 'bg-orange-500 text-white',
   };
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: CreatePropertyFormData) => {
     createPropertyMutation.mutate({
       name: data.name,
       address: data.address,
@@ -315,6 +319,7 @@ export default function Properties() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0">None</SelectItem>
+                          <SelectItem value="-1" className="font-semibold text-primary">+ Add New Owner</SelectItem>
                           {owners.map((owner) => (
                             <SelectItem key={owner.id} value={String(owner.id)}>
                               {owner.first_name} {owner.last_name} ({owner.email})
@@ -326,6 +331,67 @@ export default function Properties() {
                         <p className="text-sm text-destructive">{errors.owner_id.message}</p>
                       )}
                     </div>
+
+                    {watch('owner_id') === -1 && (
+                      <div className="p-4 border rounded-lg bg-muted/30 space-y-4 animate-in fade-in slide-in-from-top-2">
+                        <h4 className="text-sm font-semibold">New Owner Details</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="new_owner_first_name">First Name</Label>
+                            <Input 
+                              id="new_owner_first_name" 
+                              placeholder="First name" 
+                              {...register('new_owner_first_name')}
+                              className={errors.new_owner_first_name ? 'border-destructive' : ''}
+                            />
+                            {errors.new_owner_first_name && (
+                              <p className="text-sm text-destructive">{errors.new_owner_first_name.message}</p>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="new_owner_last_name">Last Name</Label>
+                            <Input 
+                              id="new_owner_last_name" 
+                              placeholder="Last name" 
+                              {...register('new_owner_last_name')}
+                              className={errors.new_owner_last_name ? 'border-destructive' : ''}
+                            />
+                            {errors.new_owner_last_name && (
+                              <p className="text-sm text-destructive">{errors.new_owner_last_name.message}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="new_owner_email">Email Address</Label>
+                          <Input 
+                            id="new_owner_email" 
+                            type="email"
+                            placeholder="owner@example.com" 
+                            {...register('new_owner_email')}
+                            className={errors.new_owner_email ? 'border-destructive' : ''}
+                          />
+                          {errors.new_owner_email && (
+                            <p className="text-sm text-destructive">{errors.new_owner_email.message}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="new_owner_password">Temporary Password</Label>
+                          <Input 
+                            id="new_owner_password" 
+                            placeholder="Defaults to 123456" 
+                            defaultValue="123456"
+                            {...register('new_owner_password')}
+                            className={errors.new_owner_password ? 'border-destructive' : ''}
+                          />
+                          <p className="text-[10px] text-muted-foreground italic">
+                            The owner can change this password after their first login.
+                          </p>
+                          {errors.new_owner_password && (
+                            <p className="text-sm text-destructive">{errors.new_owner_password.message}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <div className="space-y-3">
                       <Label>Platform Listing IDs</Label>
                       <p className="text-sm text-muted-foreground">
