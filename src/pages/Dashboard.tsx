@@ -79,17 +79,28 @@ export default function Dashboard() {
     );
   }
 
-  if (error || !dashboardData?.data) {
-    return (
-      <Layout>
-        <div className="p-6">
-          <div className="text-red-500">Error loading dashboard data: {error?.message || 'Unknown error'}</div>
-        </div>
-      </Layout>
-    );
-  }
-
-  const { data } = dashboardData;
+  // Use empty defaults when API fails so the dashboard still renders
+  const emptyMetric = { value: 0, percentage_change: 0, trend_direction: 'neutral' as const, label: '' };
+  const data = dashboardData?.data ?? {
+    total_revenue: emptyMetric,
+    property_revenue: emptyMetric,
+    service_revenue: emptyMetric,
+    active_bookings: emptyMetric,
+    average_daily_rate: emptyMetric,
+    overall_occupancy_rate: emptyMetric,
+    pending_payments: emptyMetric,
+    top_performing_properties: [],
+    luxury_services_revenue: [],
+    guest_origins: [],
+    priority_tasks: [],
+    revenue_forecast: [],
+    revenue_trends: { current_period: [], last_year_period: [] },
+    occupancy_by_property: [],
+    revenue_by_channel: [],
+    payment_collection: { paid: 0, partial: 0, pending: 0, total: 0 },
+    upcoming_check_ins: [],
+    upcoming_check_outs: [],
+  };
 
   // Map API data to KPIs (simplified - no comparison labels)
   const kpis: KPI[] = [

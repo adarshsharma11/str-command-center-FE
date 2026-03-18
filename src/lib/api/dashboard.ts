@@ -163,7 +163,8 @@ export function useDashboardExtendedQuery(
   return useQuery<DashboardExtendedResponse, Error>({
     queryKey: ['dashboard-extended', params?.from, params?.to],
     queryFn: () => fetchDashboardExtended(params),
-    staleTime: 60_000, // 1 minute
+    staleTime: 60_000,
+    retry: 1,
     ...options,
   });
 }
