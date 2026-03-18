@@ -81,6 +81,11 @@ export function BookingBlock({
               <Calendar size={12} />
               {nights} night{nights !== 1 ? 's' : ''}
             </span>
+            {booking.totalAmount > 0 && (
+              <span className="text-emerald-600 font-medium">
+                ${booking.totalAmount.toLocaleString()}
+              </span>
+            )}
             {booking.guestCount && (
               <span className="flex items-center gap-1">
                 <User size={12} />

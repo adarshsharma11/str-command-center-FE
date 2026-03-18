@@ -12,7 +12,7 @@ import {
   startOfDay,
   endOfDay,
 } from 'date-fns';
-import { CalendarBooking, ColorAssignment, channelColors } from './types';
+import { CalendarBooking, ColorAssignment, channelColors, VendorTask } from './types';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -20,22 +20,27 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { VendorTaskTag } from './VendorTaskTag';
 
 interface MonthViewProps {
   date: Date;
   bookings: CalendarBooking[];
+  tasks?: VendorTask[];
   colorAssignments: ColorAssignment[];
   colorBy: 'property' | 'channel';
   onBookingClick: (booking: CalendarBooking) => void;
+  onTaskClick?: (task: VendorTask) => void;
   onDayClick: (date: Date) => void;
 }
 
 export function MonthView({
   date,
   bookings,
+  tasks = [],
   colorAssignments,
   colorBy,
   onBookingClick,
+  onTaskClick,
   onDayClick,
 }: MonthViewProps) {
   const monthStart = startOfMonth(date);
@@ -91,6 +96,11 @@ export function MonthView({
     return { isStart, isEnd };
   };
 
+  // Get tasks for a specific day
+  const getTasksForDay = (day: Date) => {
+    return tasks.filter((t) => isSameDay(t.scheduledTime, day));
+  };
+
   return (
     <div className="flex flex-col h-full bg-card rounded-lg overflow-hidden">
       {/* Month Header */}
@@ -118,6 +128,7 @@ export function MonthView({
           <div key={weekIdx} className="grid grid-cols-7 border-b border-border last:border-b-0">
             {week.map((day) => {
               const dayBookings = getBookingsForDay(day);
+              const dayTasks = getTasksForDay(day);
               const isToday = isSameDay(day, today);
               const isCurrentMonth = isSameMonth(day, date);
 
@@ -143,6 +154,23 @@ export function MonthView({
                     >
                       {format(day, 'd')}
                     </span>
+                    {dayTasks.length > 0 && (
+                      <div className="flex -space-x-1 overflow-hidden">
+                        {dayTasks.slice(0, 2).map((task) => (
+                          <VendorTaskTag
+                            key={task.id}
+                            task={task}
+                            compact
+                            onClick={() => onTaskClick?.(task)}
+                          />
+                        ))}
+                        {dayTasks.length > 2 && (
+                          <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center border border-background">
+                            <span className="text-[8px] font-bold">+{dayTasks.length - 2}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Booking Bars */}

@@ -213,9 +213,11 @@ export default function Calendar() {
                 <MonthView
                   date={currentDate}
                   bookings={bookings}
+                  tasks={tasks}
                   colorAssignments={colorAssignments}
                   colorBy="property"
                   onBookingClick={handleBookingClick}
+                  onTaskClick={handleTaskClick}
                   onDayClick={handleDayClick}
                 />
               )}
