@@ -136,7 +136,7 @@ app.post('/api/v1/service-booking', async (req, res) => {
             <tr><td>Guest Name</td><td>${booking.guest_name}</td></tr>
             <tr><td>Number of Guests</td><td>${booking.number_of_guests}</td></tr>
             <tr><td>Property</td><td>${booking.property_name}</td></tr>
-            <tr><td>Stay Dates</td><td>${new Date(booking.check_in_date).toLocaleDateString()} – ${new Date(booking.check_out_date).toLocaleDateString()}</td></tr>
+            <tr><td>Stay Dates</td><td>${new Date(booking.check_in_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} – ${new Date(booking.check_out_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}</td></tr>
           </table>
 
           <div style="text-align:center; margin:32px 0 16px;">

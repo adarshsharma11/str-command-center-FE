@@ -143,13 +143,13 @@ export function CalendarSidePanel({ booking, tasks, onClose }: CalendarSidePanel
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Check-in</span>
                 <span className="text-sm font-medium text-emerald-600">
-                  {format(booking.checkIn, 'MMM d, h:mm a')}
+                  {format(booking.checkIn, 'MM/dd/yyyy, h:mm a')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Check-out</span>
                 <span className="text-sm font-medium text-red-500">
-                  {format(booking.checkOut, 'MMM d, h:mm a')}
+                  {format(booking.checkOut, 'MM/dd/yyyy, h:mm a')}
                 </span>
               </div>
               <Separator className="my-2" />

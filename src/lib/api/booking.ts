@@ -53,6 +53,7 @@ export type ViewBooking = {
   id: string;
   guestName: string;
   guestEmail?: string;
+  guestPhone?: string;
   propertyName: string;
   checkIn: Date;
   checkOut: Date;
@@ -88,6 +89,7 @@ export function toViewBooking(b: BookingApiItem): ViewBooking {
     id: b.reservation_id,
     guestName: b.guest_name ?? '—',
     guestEmail: b.guest_email,
+    guestPhone: b.guest_phone,
     propertyName: b.property_name ?? '—',
     checkIn,
     checkOut,
@@ -262,7 +264,8 @@ export function useCalendarBookingsQuery(page = 1, limit = 50, options?: Omit<Qu
 
 export type SendWelcomePayload = {
   reservation_id: string;
-  guest_email: string;
+  guest_email?: string;
+  guest_phone?: string;
 };
 
 export type SendWelcomeResponse = {

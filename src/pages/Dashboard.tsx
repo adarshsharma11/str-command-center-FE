@@ -21,6 +21,8 @@ import {
 } from '@/components/dashboard';
 import { KPI } from '@/types';
 
+import { format } from 'date-fns';
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [customizerOpen, setCustomizerOpen] = useState(false);
@@ -374,7 +376,7 @@ export default function Dashboard() {
                           </p>
 
                           <p className="text-xs text-muted-foreground mt-1">
-                            Due {new Date(task.due_date).toLocaleDateString()}
+                            Due {format(new Date(task.due_date), 'MM/dd/yyyy')}
                           </p>
 
                           {/* Meta Badges */}
