@@ -10,9 +10,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Link2, ExternalLink, Copy, Check } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Link2, ExternalLink, Copy, Check, Trash2, BedDouble, DollarSign } from 'lucide-react';
 import { PropertiesPageSkeleton } from '@/components/skeletons/PropertiesListSkeleton';
-import { usePropertiesQuery, propertyMappers, useCreatePropertyMutation, createPropertySchema, type PropertyView, type PropertyListingView } from '@/lib/api/property';
+import { usePropertiesQuery, propertyMappers, useCreatePropertyMutation, useDeletePropertyMutation, createPropertySchema, type PropertyView, type PropertyListingView } from '@/lib/api/property';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { fetchOwners } from '@/lib/api/reports';
@@ -31,6 +41,7 @@ type CreatePropertyFormData = {
 
 export default function Properties() {
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
+  const [propertyToDelete, setPropertyToDelete] = useState<{id: string, name: string} | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [copiedPropertyId, setCopiedPropertyId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -84,6 +95,31 @@ export default function Properties() {
       });
     },
   });
+
+  const deletePropertyMutation = useDeletePropertyMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Property deleted',
+        description: 'The property has been successfully removed.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      setPropertyToDelete(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error deleting property',
+        description: error.message || 'Failed to delete property. It might have active dependencies.',
+        variant: 'destructive',
+      });
+      setPropertyToDelete(null);
+    }
+  });
+
+  const handleDeleteConfirm = () => {
+    if (propertyToDelete) {
+      deletePropertyMutation.mutate(propertyToDelete.id);
+    }
+  };
 
   const page = 1;
   const limit = 10;
@@ -361,78 +397,97 @@ export default function Properties() {
               const propertyListings = getPropertyListings(property.id);
               
               return (
-                <Card key={property.id} className="hover:shadow-lg transition-shadow">
+                <Card key={property.id} className="hover:shadow-lg transition-shadow flex flex-col h-full">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <CardTitle className="text-lg">{property.name}</CardTitle>
-                      <Badge className={statusColors[property.internalStatus]}>
-                        {property.internalStatus}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={statusColors[property.internalStatus]}>
+                          {property.internalStatus}
+                        </Badge>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setPropertyToDelete({ id: property.id, name: property.name })}
+                          disabled={deletePropertyMutation.isPending && propertyToDelete?.id === property.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-2 mt-1">
                       <p className="text-sm text-muted-foreground">{property.address}</p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
-                        <span className="flex items-center gap-1">
-                          Rooms: {property.bedrooms}
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          Base Price: ${property.basePrice}
-                        </span>
+                      <div className="flex items-center gap-2 text-xs font-medium">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-primary">
+                          <BedDouble className="h-3.5 w-3.5" />
+                          <span>{property.bedrooms} {property.bedrooms === 1 ? 'Room' : 'Rooms'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                          <DollarSign className="h-3.5 w-3.5" />
+                          <span>${property.basePrice} <span className="opacity-70 font-normal">/ night</span></span>
+                        </div>
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-2">Connected Listings</p>
-                      <div className="space-y-2">
-                        {propertyListings.map((listing) => (
-                          <div
-                            key={listing.id}
-                            className="flex items-center justify-between p-2 rounded bg-accent/50"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {listing.platformName}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                Trust: {listing.trustScore}%
-                              </span>
-                            </div>
-                            <Badge className={`text-xs ${syncStatusColors['Synced']}`}>
-                              {'Synced'}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {property.iCalUrl && (
-                      <div className="pt-2 border-t">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground mb-1">iCal Feed URL</p>
-                            <p className="text-xs text-muted-foreground truncate font-mono">
-                              {property.iCalUrl}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => copyICalUrl(property.id, property.iCalUrl)}
-                            className="ml-2 h-8 w-8"
-                          >
-                            {copiedPropertyId === property.id ? (
-                              <Check className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
+                  <CardContent className="flex flex-col flex-1 space-y-4">
+                    <div className="flex-1 space-y-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">Connected Listings</p>
+                        <div className="space-y-2">
+                          {propertyListings.length > 0 ? (
+                            propertyListings.map((listing) => (
+                              <div
+                                key={listing.id}
+                                className="flex items-center justify-between p-2 rounded bg-accent/50"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {listing.platformName}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    Trust: {listing.trustScore}%
+                                  </span>
+                                </div>
+                                <Badge className={`text-xs ${syncStatusColors['Synced']}`}>
+                                  {'Synced'}
+                                </Badge>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic bg-accent/30 p-2 rounded">No platforms connected</p>
+                          )}
                         </div>
                       </div>
-                    )}
 
-                    <Dialog>
+                      {property.iCalUrl && (
+                        <div className="pt-4 border-t border-border">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-muted-foreground mb-1">iCal Feed URL</p>
+                              <p className="text-xs text-muted-foreground truncate font-mono">
+                                {property.iCalUrl}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => copyICalUrl(property.id, property.iCalUrl)}
+                              className="ml-2 h-8 w-8"
+                            >
+                              {copiedPropertyId === property.id ? (
+                                <Check className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Copy className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-2 mt-auto">
+                      <Dialog>
                       <DialogTrigger asChild>
                         <Button
                           variant="outline"
@@ -501,6 +556,7 @@ export default function Properties() {
                         </div>
                       </DialogContent>
                     </Dialog>
+                    </div>
                   </CardContent>
                 </Card>
               );
@@ -508,6 +564,35 @@ export default function Properties() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog 
+        open={!!propertyToDelete} 
+        onOpenChange={(open) => !open && !deletePropertyMutation.isPending && setPropertyToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{propertyToDelete?.name}</strong> and remove its data from the system. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletePropertyMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                handleDeleteConfirm(); 
+              }}
+              disabled={deletePropertyMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {deletePropertyMutation.isPending ? 'Deleting...' : 'Delete Property'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }

@@ -71,44 +71,44 @@ function toPropertyListings(p: PropertyApiItem): PropertyListingView[] {
     lastSyncedAt: new Date(p.updated_at || p.created_at || Date.now()),
   };
   const rows: PropertyListingView[] = [];
-  
+
   // Check for actual platform IDs (not null or empty strings)
   console.log('Checking Airbnb ID:', p.airbnb_id, 'Valid:', p.airbnb_id && p.airbnb_id !== 'null' && p.airbnb_id.trim() !== '');
   if (p.airbnb_id && p.airbnb_id !== 'null' && p.airbnb_id.trim() !== '') {
     console.log('Adding Airbnb listing');
-    rows.push({ 
-      id: `${p.id}-airbnb`, 
-      platformName: 'Airbnb', 
-      platformListingId: p.airbnb_id, 
+    rows.push({
+      id: `${p.id}-airbnb`,
+      platformName: 'Airbnb',
+      platformListingId: p.airbnb_id,
       syncStatus: 'Synced' as const, // Show as connected when ID is present
-      ...base 
+      ...base
     });
   }
-  
+
   console.log('Checking Vrbo ID:', p.vrbo_id, 'Valid:', p.vrbo_id && p.vrbo_id !== 'null' && p.vrbo_id.trim() !== '');
   if (p.vrbo_id && p.vrbo_id !== 'null' && p.vrbo_id.trim() !== '') {
     console.log('Adding Vrbo listing');
-    rows.push({ 
-      id: `${p.id}-vrbo`, 
-      platformName: 'Vrbo', 
-      platformListingId: p.vrbo_id, 
+    rows.push({
+      id: `${p.id}-vrbo`,
+      platformName: 'Vrbo',
+      platformListingId: p.vrbo_id,
       syncStatus: 'Synced' as const, // Show as connected when ID is present
-      ...base 
+      ...base
     });
   }
-  
+
   console.log('Checking Booking ID:', p.booking_id, 'Valid:', p.booking_id && p.booking_id !== 'null' && p.booking_id.trim() !== '');
   if (p.booking_id && p.booking_id !== 'null' && p.booking_id.trim() !== '') {
     console.log('Adding Booking.com listing');
-    rows.push({ 
-      id: `${p.id}-booking`, 
-      platformName: 'Booking.com', 
-      platformListingId: p.booking_id, 
+    rows.push({
+      id: `${p.id}-booking`,
+      platformName: 'Booking.com',
+      platformListingId: p.booking_id,
       syncStatus: 'Synced' as const, // Show as connected when ID is present
-      ...base 
+      ...base
     });
   }
-  
+
   console.log('Final rows:', rows);
   return rows;
 }
@@ -178,17 +178,17 @@ export const createPropertySchema = yup.object({
     .min(3, 'Property name must be at least 3 characters')
     .max(100, 'Property name must not exceed 100 characters'),
   address: yup.string()
-    .optional()
+    .required('Address is required')
     .max(200, 'Address must not exceed 200 characters'),
   status: yup.string()
     .oneOf(['active', 'inactive', 'maintenance'], 'Status must be Active, Inactive, or Maintenance')
     .required('Status is required'),
   bedrooms: yup.number()
-    .optional()
-    .min(0, 'Rooms cannot be negative'),
+    .required('Number of bedrooms is required')
+    .min(1, 'Rooms cannot be less than 1'),
   base_price: yup.number()
-    .optional()
-    .min(0, 'Price cannot be negative'),
+    .required('Base price is required')
+    .min(100, 'Price cannot be less than $100'),
   owner_id: yup.number()
     .optional()
     .nullable(),
@@ -204,3 +204,22 @@ export const createPropertySchema = yup.object({
 });
 
 export type CreatePropertyFormData = yup.InferType<typeof createPropertySchema>;
+
+// Delete Property
+type DeletePropertyResponse = {
+  success?: boolean;
+  message?: string;
+};
+
+async function deleteProperty(id: string | number): Promise<DeletePropertyResponse> {
+  const endpoint = ENDPOINTS.PROPERTY.DELETE.replace(':id', id.toString());
+  return apiClient.delete<DeletePropertyResponse>(endpoint);
+}
+
+export function useDeletePropertyMutation(options?: MutationOptions<DeletePropertyResponse, Error, string | number>) {
+  return useMutation<DeletePropertyResponse, Error, string | number>({
+    mutationKey: ['properties', 'delete'],
+    mutationFn: (id) => deleteProperty(id),
+    ...options,
+  });
+}

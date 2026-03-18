@@ -6,8 +6,8 @@ export const ENDPOINTS = {
     REGISTER: `${API_PREFIX}/auth/register`,
     OWNERS: `${API_PREFIX}/auth/owners`,
   },
-  BOOKING : {
-    LIST : `${API_PREFIX}/bookings`,
+  BOOKING: {
+    LIST: `${API_PREFIX}/bookings`,
     SEND_WELCOME: `${API_PREFIX}/bookings/send-welcome`,
   },
   SERVICE_BOOKINGS: {
@@ -17,8 +17,9 @@ export const ENDPOINTS = {
     RESPONSES_STREAM: `${API_PREFIX}/service-bookings/responses/stream`,
     RESPOND: `${API_PREFIX}/service-bookings/respond`,
   },
-  PROPERTY : {
-    LIST : `${API_PREFIX}/property`,
+  PROPERTY: {
+    LIST: `${API_PREFIX}/property`,
+    DELETE: `${API_PREFIX}/property/:id`,
   },
   CATEGORIES: {
     LIST: `${API_PREFIX}/categories`,
@@ -79,7 +80,7 @@ export const ENDPOINTS = {
     PLATFORM_UPDATE: `${API_PREFIX}/users/platform/:platform`,
     USER_CONNECT: `${API_PREFIX}/users/:email/connect`,
     USER_TEST: `${API_PREFIX}/users/:email/test`,
-    
+
     // Platform endpoints
     PLATFORM_CONNECT: `${API_PREFIX}/users/integrations/:platform/connect`,
     PLATFORM_DISCONNECT: `${API_PREFIX}/users/integrations/:platform`,
