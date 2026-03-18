@@ -39,19 +39,32 @@ The app is live at **http://146.190.165.203/** with real data flowing through mu
 
 ## Dashboard Backend — What Was Fixed (March 18, 2026)
 
+### Round 1 — Core dashboard
 The `dashboard_service.py` was rewritten to fix two critical issues:
 
 1. **`_get_services_revenue()`** was querying a nonexistent `services` table — fixed to use `service_category` table instead
 2. **`get_extended_metrics()` method didn't exist** — added full implementation with ~15 SQL helper methods
 
+### Round 2 — Four additional dashboard fixes (same day)
+
+The backend (`dashboard_service.py`) was updated again with 4 new features, and the frontend was updated to consume them:
+
+1. **Guest Origins** — New `_get_guest_origins()` / `_get_guest_origins_in_range()` methods derive guest countries from phone country codes using a `PHONE_COUNTRY_MAP` (35+ country code mappings). Now shows "India — 6 bookings — $8,800" etc.
+2. **Upcoming Check-outs** — Extended lookahead window from 2 days to 7 days in `_get_upcoming_events()`. Check-outs now show on the dashboard (previously empty).
+3. **Priority Tasks** — New `_get_priority_tasks()` method pulls pending tasks from `cleaning_tasks` table + generates check-in prep tasks from upcoming bookings. Frontend maps backend priorities (`urgent`/`high`/`medium`/`low`) to P1–P4.
+4. **Revenue Trends Weekly/Monthly Toggle** — `_get_revenue_trends()` now returns 4 arrays: `current_period` (weekly), `last_year_period` (weekly), `current_period_monthly`, `last_year_period_monthly`. Frontend `RevenueTrendChart.tsx` switches data source on toggle.
+
 The dashboard now returns real data from PostgreSQL:
-- **Total Revenue**: $18,002.05 (16 bookings across Airbnb + VRBO)
-- **Revenue by Channel**: Airbnb 66.7% / VRBO 33.3%
+- **Total Revenue**: ~$15K this month (13 bookings across Airbnb + VRBO)
+- **Revenue by Channel**: Airbnb 80% / VRBO 20%
 - **3 properties**: Exquisite Midcentury Retreat, Satori Retreat House, Joshua Tree Mansion
 - **5 service categories**: Test1, Airport Transfer, Massage Therapy, Bartender, Concierge Service
-- **Upcoming events**: Real check-in/check-out dates from bookings table
+- **Guest Origins**: India (derived from +91 phone codes)
+- **Priority Tasks**: Cleaning tasks + check-in prep tasks
+- **Upcoming events**: Check-ins and check-outs within 7-day window
 
-File modified on server: `/var/www/app/Email-parser/src/api/services/dashboard_service.py`
+Files modified on server: `/var/www/app/Email-parser/src/api/services/dashboard_service.py`
+Frontend files: `RevenueTrendChart.tsx`, `dashboard.ts` (types), `Dashboard.tsx` (props + priority mapping)
 
 ---
 
