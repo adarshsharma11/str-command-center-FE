@@ -29,6 +29,10 @@ export type GuestOrigin = {
 export type PriorityTask = {
   id: number;
   reservation_id: string;
+  title: string;
+  type: string;
+  priority: string;
+  status: string;
   due_date: string;
   property: string;
 };
@@ -140,7 +144,7 @@ export async function fetchDashboardExtended(params?: { from?: string; to?: stri
   const queryParams = new URLSearchParams();
   if (params?.from) queryParams.append('from', params.from);
   if (params?.to) queryParams.append('to', params.to);
-  
+
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
   return apiClient.get<DashboardExtendedResponse>(`${ENDPOINTS.DASHBOARD.EXTENDED}${queryString}`);
 }

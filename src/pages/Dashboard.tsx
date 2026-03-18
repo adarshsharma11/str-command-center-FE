@@ -35,6 +35,7 @@ export default function Dashboard() {
   // Fetch extended dashboard data
   const { data: dashboardData, isLoading, error } = useDashboardExtendedQuery(dateFilter.apiParams);
 
+
   if (isLoading) {
     return (
       <Layout>
@@ -135,6 +136,8 @@ export default function Dashboard() {
       trend: data.active_bookings?.trend_direction,
     },
   ];
+
+  console.log(data.priority_tasks, 'hhhh')
 
   return (
     <Layout>
@@ -314,27 +317,74 @@ export default function Dashboard() {
                 Priority Tasks
               </CardTitle>
             </CardHeader>
+
             <CardContent>
               <div className="space-y-3">
-                {data.priority_tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors cursor-pointer"
-                    onClick={() => navigate('/crews')}
-                  >
-                    <Badge className="bg-orange-500 text-white shrink-0">
-                      #{task.reservation_id.slice(-6)}
-                    </Badge>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {task.property}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Due {new Date(task.due_date).toLocaleDateString()}
-                      </p>
+                {data.priority_tasks.map((task) => {
+                  const priorityStyles = {
+                    high: "bg-red-100 text-red-600",
+                    medium: "bg-orange-100 text-orange-600",
+                    low: "bg-green-100 text-green-600"
+                  };
+
+                  const statusStyles = {
+                    pending: "bg-yellow-100 text-yellow-700",
+                    completed: "bg-green-100 text-green-700",
+                    in_progress: "bg-blue-100 text-blue-700"
+                  };
+
+                  const typeStyles = {
+                    cleaning: "bg-purple-100 text-purple-700",
+                    maintenance: "bg-indigo-100 text-indigo-700"
+                  };
+
+                  return (
+                    <div
+                      key={task.id}
+                      className="flex items-start justify-between gap-3 p-4 rounded-xl bg-accent/50 hover:bg-accent transition-all cursor-pointer border border-transparent hover:border-border"
+                      onClick={() => navigate('/crews')}
+                    >
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+
+                        {/* ID Badge */}
+                        <Badge className="bg-orange-500 text-white shrink-0">
+                          #{task.id}
+                        </Badge>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">
+                            {task.title}
+                          </p>
+
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Due {new Date(task.due_date).toLocaleDateString()}
+                          </p>
+
+                          {/* Meta Badges */}
+                          <div className="flex gap-2 mt-2 flex-wrap">
+
+                            {/* Type */}
+                            <span className={`px-2 py-0.5 rounded-md text-xs capitalize ${typeStyles[task.type] || "bg-gray-100 text-gray-600"}`}>
+                              {task.type}
+                            </span>
+
+                            {/* Priority */}
+                            <span className={`px-2 py-0.5 rounded-md text-xs capitalize ${priorityStyles[task.priority]}`}>
+                              {task.priority}
+                            </span>
+
+                            {/* Status */}
+                            <span className={`px-2 py-0.5 rounded-md text-xs capitalize ${statusStyles[task.status]}`}>
+                              {task.status.replace("_", " ")}
+                            </span>
+
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
