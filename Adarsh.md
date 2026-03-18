@@ -1,177 +1,88 @@
 # Adarsh - Implementation Handoff Guide
 
-Hey Adarsh! This document explains the latest frontend updates and what changed in this PR. **Important: We've removed Supabase entirely.** The app now uses the Portgas DB backend — all API calls go through the existing Express API layer (`/api/v1/*`). No Supabase client, no Supabase auth, no Supabase anything.
+Hey Adarsh! This document tracks the backend integration status for the MOMA.HOUSE CRM frontend. The app uses the Portgas DB backend — all API calls go through `/api/v1/*`. No Supabase.
+
+**Last updated: March 18, 2026**
 
 ---
 
-## What's In This PR
+## Current Production Status
 
-This PR merges the enhanced frontend (pricing, reports, dashboard) into the main branch. It also:
+The app is live at **http://146.190.165.203/** with real data flowing through multiple pages.
 
-1. **Removes Supabase** — deleted `@supabase/supabase-js` dependency and `src/integrations/supabase/` directory
-2. **Merges your recent backend work** — booking API improvements, property refresh, CI/CD pipeline, psql upgrade (PRs #5 and #6)
-3. **Adds null safety** — all dashboard data fields use `?? 0` and `?? []` so they won't crash if the backend returns partial data
-4. **Adds dynamic property loading** in Testing page via `useAllPropertiesQuery` (falls back to mock if API unavailable)
+### What's Already Working (DONE)
 
-### Files that changed in the merge:
-- `.github/workflows/deploy.yaml` — your CI/CD (kept as-is)
-- `src/lib/api/booking.ts` — your booking API improvements (kept as-is)
-- `src/lib/api/endpoints.ts` — merged endpoint additions from both sides
-- `src/lib/api/property.ts` — your property API fixes (kept as-is)
-- `src/pages/Bookings.tsx` — your bookings page improvements (kept as-is)
-- `src/pages/Calendar.tsx`, `Properties.tsx` — your backend integration (kept as-is)
-- `src/pages/Dashboard.tsx` — **merged**: our enhanced UI + your null safety
-- `src/pages/Testing.tsx` — **merged**: our polling + your dynamic property loading
+| Page | Status | Notes |
+|------|--------|-------|
+| **Dashboard** | LIVE with real data | All KPIs, charts, forecasts showing real booking/revenue data |
+| **Calendar** | LIVE | Connected to bookings API |
+| **Properties** | LIVE | Connected to properties API |
+| **Bookings** | LIVE | Connected to bookings API |
+| **Inbox** | LIVE | Connected to emails API |
+| **Reports** | LIVE | Owner Statement, Booking Summary, etc. pulling real data |
+| **Dispatch** | LIVE | Service bookings/responses working (SSE stream has minor errors, non-blocking) |
+| **Crews** | LIVE | Connected to crews API |
+| **Automation** | LIVE | Activity rules API connected |
+| **Settings/Integrations** | LIVE | User/platform integration endpoints working |
+| **Login/Auth** | LIVE | Fernet-encrypted passwords, JWT tokens, 24hr expiry |
 
----
+### What Still Needs Backend Work
 
-## Summary of Frontend Changes (New Stuff)
-
-### 1. Dashboard Enhancement
-- **New charts**: Revenue Trends (year-over-year comparison), Occupancy by Property, Revenue by Channel
-- **Simplified KPI cards**: Removed "vs last period" comparisons
-- **Customization**: Users can toggle which sections to show (saved in localStorage)
-- **Date range picker**: Filter dashboard by date period
-
-### 2. Reports Page (`/reports`)
-**6 report types:**
-1. Owner Statement - Revenue/expenses per property for owners (services integrated directly into booking tables)
-2. Booking Summary - All bookings in date range
-3. Service Revenue - Luxury services breakdown
-4. Service Provider Statement - Invoice-style for service providers
-5. Occupancy Report - Occupancy rates by property
-6. Performance Comparison - Compare any month/year against any other period (user-selectable)
-
-**Features:**
-- Preview each report with charts and tables
-- Schedule recurring reports (weekly/monthly/quarterly)
-- Email reports to recipients
-- Performance Comparison now has month/year dropdowns to choose comparison period
-
-### 3. Pricing Page (`/pricing`)
-Two tabs:
-
-**Tab 1: AI Optimization**
-- Calendar view per property showing AI-calculated prices
-- Shows "Booked" for taken dates, AI price for available dates
-- Algorithm factors: seasonality, day-of-week (Sat +20%, Mon/Tue -10%), lead time, holidays
-
-**Tab 2: Manual Config**
-- User-configurable pricing rules with 3 simple sliders:
-  - **Weekend Boost** (0-50%): Price increase for Fri/Sat nights
-  - **Seasonal Strength** (0-100%): How much to follow seasonal patterns
-  - **Island Discount** (0-30%): Discount for isolated available nights between bookings
-    - 3-night island: base discount
-    - 2-night island: 1.33x the base discount
-    - 1-night island: 1.5x the base discount
-- 14-day preview table showing calculated prices with factor breakdown
-
-### 4. Dev Mode
-- Set `VITE_DEV_MODE=true` in `.env.development` to bypass login
-- Shows "DEV MODE" badge in sidebar
-- Uses mock data throughout
+| Page | What's Needed |
+|------|--------------|
+| **Pricing** | Load/save pricing config per property, fetch booked dates from API |
+| **Reports - Email** | `POST /api/v1/reports/send-email` — generate PDF + send email |
+| **Reports - Scheduling** | CRUD for `scheduled_reports` table (create, list, toggle, delete) |
+| **Report Filters** | Fetch real property/owner lists for filter dropdowns |
 
 ---
 
-## What You Need To Do
+## Dashboard Backend — What Was Fixed (March 18, 2026)
 
-Look for `// TODO: [ADARSH]` comments throughout the codebase. Here's the complete list:
+The `dashboard_service.py` was rewritten to fix two critical issues:
 
-### Dashboard API (`/src/lib/api/dashboard.ts`)
+1. **`_get_services_revenue()`** was querying a nonexistent `services` table — fixed to use `service_category` table instead
+2. **`get_extended_metrics()` method didn't exist** — added full implementation with ~15 SQL helper methods
 
-```typescript
-// TODO: [ADARSH] Connect to real API endpoint
-// Expected endpoint: GET /api/v1/dashboard/extended
-// Query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD
-```
+The dashboard now returns real data from PostgreSQL:
+- **Total Revenue**: $18,002.05 (16 bookings across Airbnb + VRBO)
+- **Revenue by Channel**: Airbnb 66.7% / VRBO 33.3%
+- **3 properties**: Exquisite Midcentury Retreat, Satori Retreat House, Joshua Tree Mansion
+- **5 service categories**: Test1, Airport Transfer, Massage Therapy, Bartender, Concierge Service
+- **Upcoming events**: Real check-in/check-out dates from bookings table
 
-**Expected Response Shape:**
-```typescript
-{
-  // Existing fields...
-  average_daily_rate: { value: number, label: string },
-  overall_occupancy_rate: { value: number, label: string },
-  revenue_forecast: [
-    { period: '30d', confirmed_revenue: number, bookings_count: number },
-    { period: '60d', confirmed_revenue: number, bookings_count: number },
-    { period: '90d', confirmed_revenue: number, bookings_count: number }
-  ],
-  revenue_trends: {
-    current_period: [{ date: string, revenue: number }],
-    last_year_period: [{ date: string, revenue: number }]
-  },
-  occupancy_by_property: [
-    { property_id: string, property_name: string, occupancy_rate: number }
-  ],
-  revenue_by_channel: [
-    { channel: string, revenue: number, percentage: number }
-  ],
-  payment_collection: { paid: number, partial: number, pending: number },
-  upcoming_check_ins: [...],
-  upcoming_check_outs: [...]
-}
-```
+File modified on server: `/var/www/app/Email-parser/src/api/services/dashboard_service.py`
 
-### Reports API (`/src/lib/api/reports.ts`)
+---
 
-**Endpoints needed:**
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/reports/owner-statement` | GET | Owner statement data |
-| `/api/v1/reports/booking-summary` | GET | Booking list |
-| `/api/v1/reports/service-revenue` | GET | Service revenue breakdown |
-| `/api/v1/reports/service-provider` | GET | Provider jobs & payouts |
-| `/api/v1/reports/occupancy` | GET | Occupancy rates |
-| `/api/v1/reports/performance` | GET | Performance comparison |
-| `/api/v1/reports/send-email` | POST | Send report via email |
-| `/api/v1/reports/scheduled` | CRUD | Scheduled reports |
-
-**Query params for all GET endpoints:**
-- `from`: Start date (YYYY-MM-DD)
-- `to`: End date (YYYY-MM-DD)
-- `propertyIds`: Comma-separated property IDs (optional)
-- `ownerIds`: Comma-separated owner IDs (optional)
-
-**Performance Comparison specific params:**
-- `compareMonth`: Month number (0-11) for comparison period
-- `compareYear`: Year (e.g., 2023) for comparison period
-
-### Report Filters (`/src/components/reports/ReportFilters.tsx`)
-
-```typescript
-// TODO: [ADARSH] Replace with actual API call to fetch properties
-const MOCK_PROPERTIES = [...];
-
-// TODO: [ADARSH] Replace with actual API call to fetch owners
-const MOCK_OWNERS = [...];
-```
+## Remaining TODO Items
 
 ### Pricing Page (`/src/pages/Pricing.tsx`)
 
 ```typescript
 // TODO: [ADARSH] Fetch properties from API
-const MOCK_PROPERTIES = [...];
-
 // TODO: [ADARSH] Replace with actual booking data from API
-const MOCK_BOOKED_DATES = {...};
-
 // TODO: [ADARSH] Load/save pricing config from Portgas DB
-// Table: property_pricing_config
-// Columns: property_id, min_price, max_price, weekend_premium, last_minute_discount,
-//          high_demand_threshold, high_demand_surge, created_at, updated_at
-
 // TODO: [ADARSH] Save calculated prices to Portgas DB
-// Suggestion: Create a property_daily_prices table with columns:
-// property_id, date, base_price, ai_price, manual_price, factors (JSONB), created_at
 ```
 
-### Email Integration
+Needs a `property_pricing_config` table:
+```sql
+CREATE TABLE property_pricing_config (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id UUID REFERENCES properties(id) ON DELETE CASCADE,
+  weekend_boost INTEGER NOT NULL DEFAULT 20,
+  seasonal_strength INTEGER NOT NULL DEFAULT 75,
+  island_discount INTEGER NOT NULL DEFAULT 10,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(property_id)
+);
+```
 
-The email dialog calls `useSendReportEmailMutation` which expects:
+### Report Email (`POST /api/v1/reports/send-email`)
 
 ```typescript
-POST /api/v1/reports/send-email
 {
   report_type: 'owner-statement' | 'booking-summary' | ...,
   filters: { from: string, to: string, ... },
@@ -182,42 +93,18 @@ POST /api/v1/reports/send-email
 }
 ```
 
-The backend should:
-1. Generate the report data
-2. Create PDF attachment (if attach_pdf is true)
-3. Send email to all recipients
+Backend should: generate report data, create PDF, send email to recipients.
 
-### Scheduled Reports
+### Scheduled Reports (CRUD)
 
-CRUD endpoints for scheduled reports:
-
-```typescript
-// Create
-POST /api/v1/reports/scheduled
-{
-  report_type: string,
-  name: string,
-  frequency: 'weekly' | 'monthly' | 'quarterly',
-  recipients: string[],
-  filters: { ... }
-}
-
-// List
-GET /api/v1/reports/scheduled
-
-// Toggle active
-PATCH /api/v1/reports/scheduled/:id
-{ is_active: boolean }
-
-// Delete
-DELETE /api/v1/reports/scheduled/:id
+```
+POST   /api/v1/reports/scheduled     — Create
+GET    /api/v1/reports/scheduled     — List all
+PATCH  /api/v1/reports/scheduled/:id — Toggle active
+DELETE /api/v1/reports/scheduled/:id — Delete
 ```
 
----
-
-## Database Tables Needed
-
-### `scheduled_reports`
+Needs a `scheduled_reports` table:
 ```sql
 CREATE TABLE scheduled_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -235,54 +122,35 @@ CREATE TABLE scheduled_reports (
 );
 ```
 
-### `property_pricing_config`
-```sql
-CREATE TABLE property_pricing_config (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  property_id UUID REFERENCES properties(id) ON DELETE CASCADE,
-  weekend_boost INTEGER NOT NULL DEFAULT 20,        -- % increase for Fri/Sat
-  seasonal_strength INTEGER NOT NULL DEFAULT 75,    -- 0-100% how much to follow seasonal patterns
-  island_discount INTEGER NOT NULL DEFAULT 10,      -- base % discount for island dates (3-night)
-  -- Island discount multipliers: 2-night = 1.33x, 1-night = 1.5x
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(property_id)
-);
+### Report Filters (`/src/components/reports/ReportFilters.tsx`)
+
+```typescript
+// TODO: [ADARSH] Replace with actual API call to fetch properties
+// TODO: [ADARSH] Replace with actual API call to fetch owners
 ```
+
+---
+
+## Architecture Quick Reference
+
+- **Frontend**: React 18 + TypeScript + Vite, deployed at `/var/www/app/str-command-center-FE/dist/`
+- **Backend**: Python FastAPI, deployed at `/var/www/app/Email-parser/`
+- **Database**: PostgreSQL 16 at `localhost:5432/str_command_center`
+- **Nginx**: proxies `/api/` → `http://127.0.0.1:8000`
+- **Process**: gunicorn + uvicorn workers (PID-based, no systemd unit)
+- **Build & Deploy**: `VITE_DEV_MODE=false VITE_API_BASE_URL="/api" npm run build` then rsync dist/
+- **Restart backend**: `kill -HUP <gunicorn-master-pid>` to graceful-reload workers
 
 ---
 
 ## Testing Locally
 
-1. Make sure you have `.env.development` with `VITE_DEV_MODE=true`
+1. Set `VITE_DEV_MODE=true` in `.env.development`
 2. Run `npm run dev`
-3. You'll see "DEV MODE" badge in sidebar
-4. All pages work with mock data
-
----
-
-## Files You'll Modify Most
-
-| File | What to do |
-|------|-----------|
-| `/src/lib/api/dashboard.ts` | Replace mock data with real API calls |
-| `/src/lib/api/reports.ts` | Replace mock data with real API calls |
-| `/src/components/reports/ReportFilters.tsx` | Fetch properties/owners from API |
-| `/src/components/reports/PerformancePreview.tsx` | Connect comparison period selector to API |
-| `/src/pages/Pricing.tsx` | Load/save pricing config, fetch properties |
-
----
-
-## Quick Wins (Easy Tasks)
-
-1. Replace `MOCK_PROPERTIES` and `MOCK_OWNERS` with API calls (4 places)
-2. Add properties endpoint to fetch list with IDs
-3. Wire up existing email infrastructure to report emails
+3. "DEV MODE" badge appears in sidebar, mock data used throughout
 
 ---
 
 ## Questions?
 
-All the mock data structures mirror exactly what the API should return. Use them as your API contract.
-
-Good luck!
+The frontend gracefully handles missing/partial API data — all fields use `?? 0` and `?? []` fallbacks so the dashboard won't crash even if some backend endpoints are incomplete.
