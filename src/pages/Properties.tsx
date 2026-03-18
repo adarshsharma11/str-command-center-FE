@@ -10,9 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Link2, ExternalLink, Copy, Check } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Plus, Link2, ExternalLink, Copy, Check, Trash2 } from 'lucide-react';
 import { PropertiesPageSkeleton } from '@/components/skeletons/PropertiesListSkeleton';
-import { usePropertiesQuery, propertyMappers, useCreatePropertyMutation, createPropertySchema, type PropertyView, type PropertyListingView } from '@/lib/api/property';
+import { usePropertiesQuery, propertyMappers, useCreatePropertyMutation, useDeletePropertyMutation, createPropertySchema, type PropertyView, type PropertyListingView } from '@/lib/api/property';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { fetchOwners } from '@/lib/api/reports';
@@ -84,6 +85,20 @@ export default function Properties() {
       });
     },
   });
+
+  const deletePropertyMutation = useDeletePropertyMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      toast({ title: 'Property deleted', description: 'Property has been removed successfully.' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message || 'Failed to delete property', variant: 'destructive' });
+    },
+  });
+
+  const handleDeleteProperty = (id: string) => {
+    deletePropertyMutation.mutate(id);
+  };
 
   const page = 1;
   const limit = 10;
@@ -338,9 +353,30 @@ export default function Properties() {
               const propertyListings = getPropertyListings(property.id);
               
               return (
-                <Card key={property.id} className="hover:shadow-lg transition-shadow">
+                <Card key={property.id} className="relative hover:shadow-lg transition-shadow">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive z-10">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Property</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete "{property.name}"? This will remove it from your dashboard and all reports.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteProperty(property.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   <CardHeader>
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between pr-8">
                       <CardTitle className="text-lg">{property.name}</CardTitle>
                       <Badge className={statusColors[property.internalStatus]}>
                         {property.internalStatus}
