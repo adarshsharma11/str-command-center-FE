@@ -181,6 +181,8 @@ export default function Dashboard() {
             <RevenueTrendChart
               currentPeriod={data.revenue_trends.current_period}
               lastYearPeriod={data.revenue_trends.last_year_period}
+              currentPeriodMonthly={data.revenue_trends.current_period_monthly}
+              lastYearPeriodMonthly={data.revenue_trends.last_year_period_monthly}
             />
           </DashboardSection>
         )}

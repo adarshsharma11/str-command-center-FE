@@ -9,6 +9,8 @@ import { format, parseISO } from 'date-fns';
 interface RevenueTrendChartProps {
   currentPeriod: RevenueTrendPoint[];
   lastYearPeriod: RevenueTrendPoint[];
+  currentPeriodMonthly?: RevenueTrendPoint[];
+  lastYearPeriodMonthly?: RevenueTrendPoint[];
 }
 
 const chartConfig: ChartConfig = {
@@ -24,15 +26,19 @@ const chartConfig: ChartConfig = {
 
 type ViewMode = 'week' | 'month';
 
-export function RevenueTrendChart({ currentPeriod, lastYearPeriod }: RevenueTrendChartProps) {
+export function RevenueTrendChart({ currentPeriod, lastYearPeriod, currentPeriodMonthly, lastYearPeriodMonthly }: RevenueTrendChartProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
 
+  // Pick the right data source based on toggle
+  const activeCurrent = viewMode === 'month' && currentPeriodMonthly?.length ? currentPeriodMonthly : currentPeriod;
+  const activeLastYear = viewMode === 'month' && lastYearPeriodMonthly?.length ? lastYearPeriodMonthly : lastYearPeriod;
+
   // Merge data for comparison
-  const chartData = currentPeriod.map((item, index) => {
-    const lastYearItem = lastYearPeriod[index];
+  const chartData = activeCurrent.map((item, index) => {
+    const lastYearItem = activeLastYear[index];
     return {
       date: item.date,
-      label: format(parseISO(item.date), viewMode === 'week' ? 'MMM d' : 'MMM'),
+      label: format(parseISO(item.date), viewMode === 'week' ? 'MMM d' : 'MMM yyyy'),
       current: item.revenue,
       lastYear: lastYearItem?.revenue ?? 0,
     };
