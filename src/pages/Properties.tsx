@@ -127,7 +127,30 @@ export default function Properties() {
     }
 
     try {
-      await navigator.clipboard.writeText(iCalUrl);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(iCalUrl);
+      } else {
+        // Fallback for non-secure contexts (HTTP)
+        const textArea = document.createElement("textarea");
+        textArea.value = iCalUrl;
+        
+        // Ensure textarea is not visible but still part of the DOM
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (!successful) {
+          throw new Error('Fallback copy failed');
+        }
+      }
+      
       setCopiedPropertyId(propertyId);
       toast({
         title: 'iCal URL Copied',
