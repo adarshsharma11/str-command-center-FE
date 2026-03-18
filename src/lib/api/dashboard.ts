@@ -22,8 +22,9 @@ export type LuxuryServiceRevenue = {
 };
 
 export type GuestOrigin = {
-  name: string;
-  value: number;
+  origin: string;
+  percentage: number;
+  bookings: number;
 };
 
 export type PriorityTask = {

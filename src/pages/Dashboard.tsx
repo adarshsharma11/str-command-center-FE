@@ -275,30 +275,46 @@ export default function Dashboard() {
                 Guest Origins
               </CardTitle>
             </CardHeader>
+
             <CardContent>
               <div className="space-y-4">
                 {(() => {
                   const origins = data.guest_origins ?? [];
-                  const total = origins.reduce((sum, o) => sum + (o.value ?? 0), 0);
+
                   return origins.map((location, index) => {
-                    const pct = total > 0 ? ((location.value / total) * 100).toFixed(1) : '0';
+                    const pct = location.percentage ?? 0;
+
                     return (
                       <div key={index} className="space-y-2">
+
+                        {/* Header */}
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-foreground">{location.name}</span>
+                          <span className="text-sm font-medium text-foreground">
+                            {location.origin}
+                          </span>
+
                           <div className="flex items-center gap-3">
+
+                            {/* Bookings count */}
                             <span className="text-sm font-semibold text-foreground">
-                              {location.value}%
+                              {location.bookings}
                             </span>
-                            <Badge variant="secondary">{pct}%</Badge>
+
+                            {/* Percentage badge */}
+                            <Badge variant="secondary">
+                              {pct}%
+                            </Badge>
                           </div>
                         </div>
+
+                        {/* Progress bar */}
                         <div className="h-2 bg-muted rounded-full overflow-hidden">
                           <div
                             className="h-full bg-primary rounded-full transition-all"
-                            style={{ width: `${location.value}%` }}
+                            style={{ width: `${pct}%` }}
                           />
                         </div>
+
                       </div>
                     );
                   });
