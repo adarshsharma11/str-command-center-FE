@@ -24,6 +24,7 @@ interface YearViewProps {
   date: Date;
   bookings: CalendarBooking[];
   occupancyData: Record<string, number>;
+  revenueData?: Record<string, number>;
   onMonthClick: (date: Date) => void;
 }
 
@@ -48,6 +49,7 @@ export function YearView({
   date,
   bookings,
   occupancyData,
+  revenueData = {},
   onMonthClick,
 }: YearViewProps) {
   const year = date.getFullYear();
@@ -89,10 +91,9 @@ export function YearView({
     return occupancyData[key] || 0;
   };
 
-  // TODO: integrate revenue API
   const getMonthRevenue = (month: Date) => {
-    // Placeholder for future revenue integration
-    return null;
+    const key = format(month, 'yyyy-MM');
+    return revenueData[key] || 0;
   };
 
   return (
@@ -146,14 +147,14 @@ export function YearView({
                 </h3>
                 <TooltipProvider>
                   <Tooltip>
-                    <TooltipTrigger>
+                    <TooltipTrigger asChild>
                       <div
                         className={cn(
                           'px-2 py-0.5 rounded-full text-xs font-medium text-white',
                           getOccupancyColor(occupancy)
                         )}
                       >
-                        {occupancy}%
+                        {occupancy.toFixed(1)}%
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -207,11 +208,12 @@ export function YearView({
                 ))}
               </div>
 
-              {/* Revenue Placeholder */}
-              {/* TODO: integrate revenue API */}
+              {/* Revenue Info */}
               <div className="mt-3 pt-3 border-t border-border">
                 <p className="text-xs text-muted-foreground">
-                  Revenue: <span className="text-foreground font-medium">--</span>
+                  Revenue: <span className="text-foreground font-semibold">
+                    ${revenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
                 </p>
               </div>
             </div>

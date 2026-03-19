@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, eachMonthOfInterval, eachDayOfInterval, format, isSameDay, subMonths, addMonths } from 'date-fns';
 import { Layout } from '@/components/Layout';
 import { CalendarHeader } from '@/components/calendar/CalendarHeader';
 import { DayView } from '@/components/calendar/DayView';
@@ -16,7 +16,6 @@ import {
 } from '@/components/calendar/types';
 import { 
   mockColorAssignments,
-  mockOccupancyData,
 } from '@/components/calendar/mockCalendarData';
 import { useCalendarBookingsQuery } from '@/lib/api/booking';
 import { usePropertiesQuery } from '@/lib/api/property';
@@ -39,7 +38,12 @@ export default function Calendar() {
   const [showAddEvent, setShowAddEvent] = useState(false);
 
   // Fetch bookings from API with larger limit for calendar view
-  const { data: bookingsData, isLoading: isLoadingBookings, error: bookingsError } = useCalendarBookingsQuery(1, 100);
+  // Fetch for the full system to ensure metrics are accurate
+  // Use a very large limit (10000) when in Year view, else 1000
+  const { data: bookingsData, isLoading: isLoadingBookings, error: bookingsError } = useCalendarBookingsQuery(
+    1, 
+    currentView === 'year' ? 10000 : 1000
+  );
   
   // Fetch properties from API
   const { data: propertiesData, isLoading: isLoadingProperties, error: propertiesError } = usePropertiesQuery(1, 50);
@@ -96,13 +100,6 @@ export default function Calendar() {
     });
   }, [allBookings, getViewDateRange]);
 
-  const tasks = useMemo(() => {
-    return allTasks.filter((task) => {
-      const taskDate = new Date(task.scheduledTime);
-      return isWithinInterval(taskDate, getViewDateRange);
-    });
-  }, [allTasks, getViewDateRange]);
-
   // Transform properties from API
   const properties = useMemo(() => {
     if (!propertiesData?.data) return [];
@@ -112,6 +109,82 @@ export default function Calendar() {
       name: property.name || `Property ${property.id}`,
     }));
   }, [propertiesData]);
+
+  // Calculate monthly occupancy and revenue for Year View
+  const monthlyStats = useMemo(() => {
+    const yearStart = startOfYear(currentDate);
+    const yearEnd = endOfYear(currentDate);
+    const months = eachMonthOfInterval({ start: yearStart, end: yearEnd });
+    
+    const occupancy: Record<string, number> = {};
+    const revenue: Record<string, number> = {};
+    
+    // Match Dashboard logic: Identify all properties that have at least one booking in the system
+    const activeInSystemPropertyIds = Array.from(new Set(apiBookings.map(b => b.propertyId)));
+
+    months.forEach(month => {
+      const monthKey = format(month, 'yyyy-MM');
+      const daysInMonth = eachDayOfInterval({ 
+        start: startOfMonth(month), 
+        end: endOfMonth(month) 
+      });
+      
+      // Dashboard uses (end - start).days for the period.
+      // For a full month, this is (number of days - 1). e.g., March 1 to March 31 is 30 days.
+      const daysInRange = daysInMonth.length - 1;
+      
+      let monthBookedNights = 0;
+      let monthRevenue = 0;
+      const activePropertiesInMonth = new Set<string>();
+
+      apiBookings.forEach(booking => {
+        // Only count confirmed and pending bookings for occupancy
+        if (booking.status === 'blocked') return;
+
+        const checkIn = new Date(booking.checkIn);
+        
+        // Match Dashboard logic: Process bookings that start in this month
+        if (format(checkIn, 'yyyy-MM') === monthKey) {
+          monthBookedNights += booking.nights || 0;
+          monthRevenue += booking.totalAmount || 0;
+          activePropertiesInMonth.add(booking.propertyId);
+        }
+      });
+
+      // Match Dashboard Logic:
+      // Overall Occupancy = (Total Booked Nights) / (Days in Period * Number of Properties)
+      if (selectedProperty === 'all') {
+        // Dashboard uses the count of properties that had bookings in the range
+        const numProperties = Math.max(activePropertiesInMonth.size, 1);
+        const availableNights = daysInRange * numProperties;
+        
+        occupancy[monthKey] = availableNights > 0 
+          ? Math.round((monthBookedNights / availableNights) * 100 * 10) / 10 
+          : 0;
+      } else {
+        // Individual property view
+        const propertyBookedNights = apiBookings
+          .filter(b => b.propertyId === selectedProperty && b.status !== 'blocked' && format(new Date(b.checkIn), 'yyyy-MM') === monthKey)
+          .reduce((sum, b) => sum + (b.nights || 0), 0);
+          
+        const availableNights = daysInRange; // 1 property
+        occupancy[monthKey] = availableNights > 0 
+          ? Math.round((propertyBookedNights / availableNights) * 100 * 10) / 10 
+          : 0;
+      }
+
+      revenue[monthKey] = monthRevenue;
+    });
+
+    return { occupancy, revenue };
+  }, [currentDate, allBookings, properties, selectedProperty]);
+
+  const tasks = useMemo(() => {
+    return allTasks.filter((task) => {
+      const taskDate = new Date(task.scheduledTime);
+      return isWithinInterval(taskDate, getViewDateRange);
+    });
+  }, [allTasks, getViewDateRange]);
 
   const handleBookingClick = useCallback((booking: CalendarBooking) => {
     setSelectedBooking(booking);
@@ -144,23 +217,15 @@ export default function Calendar() {
 
   // Handle loading and error states
   if (isLoadingBookings || isLoadingProperties) {
-    return (
-      <Layout>
-        <CalendarPageSkeleton />
-      </Layout>
-    );
+    return <CalendarPageSkeleton />;
   }
 
   if (bookingsError || propertiesError) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <div className="text-center">
-            <p className="text-destructive mb-2">Error loading calendar data</p>
-            <Button onClick={() => window.location.reload()} variant="outline">
-              Retry
-            </Button>
-          </div>
+        <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+          <p className="text-destructive font-medium">Failed to load calendar data</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
         </div>
       </Layout>
     );
@@ -226,7 +291,8 @@ export default function Calendar() {
                 <YearView
                   date={currentDate}
                   bookings={bookings}
-                  occupancyData={mockOccupancyData}
+                  occupancyData={monthlyStats.occupancy}
+                  revenueData={monthlyStats.revenue}
                   onMonthClick={handleMonthClick}
                 />
               )}

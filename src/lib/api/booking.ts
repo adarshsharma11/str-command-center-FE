@@ -130,6 +130,7 @@ export function toCalendarBooking(apiBooking: BookingApiItem): CalendarBooking {
     guestEmail: apiBooking.guest_email || undefined,
     guestPhone: apiBooking.guest_phone || undefined,
     totalAmount: apiBooking.total_amount || 0,
+    nights: typeof apiBooking.nights === 'number' ? apiBooking.nights : Math.max(0, differenceInDays(parseAsLocalTime(apiBooking.check_out_date || apiBooking.check_out || apiBooking.created_at), parseAsLocalTime(apiBooking.check_in_date || apiBooking.check_in || apiBooking.created_at))),
     notes: `Booking from ${apiBooking.platform}`,
     tasks: apiBooking.tasks?.map(task => toVendorTask(task, apiBooking.reservation_id, apiBooking.property_name)),
   };
@@ -220,11 +221,16 @@ type CalendarBookingsResult = {
   total_pages: number;
 };
 
-export function useCalendarBookingsQuery(page = 1, limit = 50, options?: Omit<QueryOptions<CalendarBookingsResult>, 'queryKey' | 'queryFn'>) {
+export function useCalendarBookingsQuery(
+  page = 1, 
+  limit = 50, 
+  filters?: BookingFilters,
+  options?: Omit<QueryOptions<CalendarBookingsResult>, 'queryKey' | 'queryFn'>
+) {
   return useQuery<CalendarBookingsResult>({
-    queryKey: ['calendar-bookings', page, limit],
+    queryKey: ['calendar-bookings', page, limit, filters],
     queryFn: async () => {
-      const data = await fetchBookings(page, limit);
+      const data = await fetchBookings(page, limit, filters);
       
       // Transform bookings to calendar format
       const bookings = data.data.bookings.map(toCalendarBooking);
