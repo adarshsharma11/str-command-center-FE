@@ -1,4 +1,4 @@
-// Core Data Models for STR Command & Control Platform
+// Core Data Models for MOMA.House Platform
 
 export type Priority = 'P1' | 'P2' | 'P3' | 'P4';
 export type TaskType = 'Cleaning' | 'Maintenance' | 'Guest Issue';

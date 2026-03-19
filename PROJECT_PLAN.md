@@ -1,7 +1,7 @@
-# STR Command & Control Platform - Project Plan
+# MOMA.House Platform - Project Plan
 
 ## Architecture Overview
-**Tech Stack**: React + Vite + TypeScript + Tailwind CSS + shadcn/ui + Supabase (via Lovable Cloud)
+**Tech Stack**: React + Vite + TypeScript + Tailwind CSS + shadcn/ui + Supabase
 **Design**: Glacier theme, mobile-first, premium aesthetic
 
 ## Core Data Models

@@ -109,7 +109,7 @@ export default function Auth() {
           toast({ title: "Welcome back!", description: "Successfully logged in." });
         } else {
           await registerAccount({ email: data.email, password: data.password, first_name: data.first_name as string, last_name: data.last_name as string });
-          toast({ title: "Account created!", description: "Welcome to STR Command Center." });
+          toast({ title: "Account created!", description: "Welcome to MOMA.House." });
         }
         navigate("/dashboard");
       } catch (err: unknown) {
@@ -133,7 +133,7 @@ export default function Auth() {
           </div>
           <div>
             <CardTitle className="text-2xl">
-              STR Command Center
+              MOMA.House
             </CardTitle>
             <CardDescription>
               Centralized control for your short-term rentals
