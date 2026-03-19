@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle } from 'lucide-react';
 import type { Task } from '@/types';
+import { format } from 'date-fns';
 
 interface PriorityTaskWidgetProps {
   tasks: Task[];
@@ -45,7 +46,7 @@ export function PriorityTaskWidget({ tasks, onTaskClick }: PriorityTaskWidgetPro
                     {task.title}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {task.type} • Due {task.dueDate.toLocaleDateString()}
+                    {task.type} • Due {format(task.dueDate, 'MM/dd/yyyy')}
                   </p>
                 </div>
               </div>

@@ -68,8 +68,8 @@ const s = StyleSheet.create({
 });
 
 const fmt = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return d; } };
-const fmtShort = (d: string) => { try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch { return d; } };
+const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }); } catch { return d; } };
+const fmtShort = (d: string) => { try { return new Date(d).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }); } catch { return d; } };
 
 // ── Shared Components ───────────────────────────────────
 function Header({ title, periodStart, periodEnd }: { title: string; periodStart?: string; periodEnd?: string }) {

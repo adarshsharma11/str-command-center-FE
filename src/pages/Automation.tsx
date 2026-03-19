@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { AutomationPageSkeleton } from '@/components/skeletons/AutomationSkeleton';
 
+import { format } from 'date-fns';
+
 export default function Automation() {
   const { data: rulesData, isLoading, error } = useActivityRulesQuery();
   const { data: logsData, isLoading: isLoadingLogs } = useAutomationLogsQuery();
@@ -122,7 +124,7 @@ export default function Automation() {
                             </p>
                         )}
                         <p className="text-xs text-muted-foreground mt-2">
-                          Created: {new Date(rule.created_at).toLocaleDateString()}
+                          Created: {format(new Date(rule.created_at), 'MM/dd/yyyy')}
                         </p>
                       </div>
                        <Button variant="ghost" size="icon" onClick={() => handleEditRule(rule)}>

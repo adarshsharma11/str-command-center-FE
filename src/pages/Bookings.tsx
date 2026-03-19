@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Mail, Loader2 } from 'lucide-react';
 import { useBookingsQuery, toViewBooking, type ViewBooking, useSendWelcomeMutation } from '@/lib/api/booking';
 import { BookingsPageSkeleton } from '@/components/skeletons/BookingsListSkeleton';
+import { format } from 'date-fns';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ export default function Bookings() {
   
   const [selectedBooking, setSelectedBooking] = useState<ViewBooking | null>(null);
   const [guestEmail, setGuestEmail] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data, isLoading } = useBookingsQuery(page, limit, {
@@ -39,29 +41,32 @@ export default function Bookings() {
 
   const sendWelcome = useSendWelcomeMutation({
     onSuccess: (data) => {
-      toast.success(data.message || "Welcome email sent successfully!");
+      toast.success(data.message || "Welcome message sent successfully!");
       setIsModalOpen(false);
       setGuestEmail('');
+      setGuestPhone('');
       setSelectedBooking(null);
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to send welcome email.");
+      toast.error(error.message || "Failed to send welcome message.");
     }
   });
 
   const handleOpenDetails = (booking: ViewBooking) => {
      setSelectedBooking(booking);
      setGuestEmail(booking.guestEmail || '');
+     setGuestPhone(booking.guestPhone || '');
      setIsModalOpen(true);
    };
 
   const handleSendWelcome = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedBooking || !guestEmail) return;
+    if (!selectedBooking || (!guestEmail && !guestPhone)) return;
 
     sendWelcome.mutate({
       reservation_id: selectedBooking.id,
-      guest_email: guestEmail,
+      guest_email: guestEmail || undefined,
+      guest_phone: guestPhone || undefined,
     });
   };
   
@@ -116,7 +121,8 @@ export default function Bookings() {
                     <SelectItem value="all">All Platforms</SelectItem>
                     <SelectItem value="Airbnb">Airbnb</SelectItem>
                     <SelectItem value="Vrbo">Vrbo</SelectItem>
-                    <SelectItem value="Direct">Direct</SelectItem>
+                    <SelectItem value="Booking">Booking</SelectItem>
+                    <SelectItem value="Plumguide">Plumguide</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -158,8 +164,8 @@ export default function Bookings() {
                       <TableRow key={booking.id} className="hover:bg-accent/50">
                         <TableCell className="font-medium">{booking.guestName}</TableCell>
                         <TableCell>{booking.propertyName}</TableCell>
-                        <TableCell>{booking.checkIn.toLocaleDateString()}</TableCell>
-                        <TableCell>{booking.checkOut.toLocaleDateString()}</TableCell>
+                        <TableCell>{booking.checkIn ? format(booking.checkIn, 'MM/dd/yyyy') : '—'}</TableCell>
+                        <TableCell>{booking.checkOut ? format(booking.checkOut, 'MM/dd/yyyy') : '—'}</TableCell>
                         <TableCell>{booking.nights}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{booking.platform}</Badge>
@@ -266,14 +272,26 @@ export default function Bookings() {
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
                   className="col-span-3"
-                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="phone" className="text-right">
+                  Phone
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="Enter guest phone (e.g. +1234567890)"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  className="col-span-3"
                 />
               </div>
             </div>
             <DialogFooter>
               <Button 
                 type="submit" 
-                disabled={sendWelcome.isPending || !guestEmail}
+                disabled={sendWelcome.isPending || (!guestEmail && !guestPhone)}
                 className="w-full sm:w-auto"
               >
                 {sendWelcome.isPending ? (
@@ -284,7 +302,7 @@ export default function Bookings() {
                 ) : (
                   <>
                     <Mail className="mr-2 h-4 w-4" />
-                    Send Welcome Email
+                    Send Welcome Message
                   </>
                 )}
               </Button>
