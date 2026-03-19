@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Mail, Loader2 } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Mail, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useBookingsQuery, toViewBooking, type ViewBooking, useSendWelcomeMutation } from '@/lib/api/booking';
 import { BookingsPageSkeleton } from '@/components/skeletons/BookingsListSkeleton';
 import { format } from 'date-fns';
@@ -27,6 +27,7 @@ export default function Bookings() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof ViewBooking; direction: 'asc' | 'desc' } | null>(null);
   
   const [selectedBooking, setSelectedBooking] = useState<ViewBooking | null>(null);
   const [guestEmail, setGuestEmail] = useState('');
@@ -36,7 +37,6 @@ export default function Bookings() {
   const { data, isLoading } = useBookingsQuery(page, limit, {
     platform: platformFilter,
     status: statusFilter,
-    search: searchTerm,
   });
 
   const sendWelcome = useSendWelcomeMutation({
@@ -77,7 +77,62 @@ export default function Bookings() {
   
   const bookings: ViewBooking[] = apiBookings.map(toViewBooking);
 
-  const statusColors = {
+  let displayedBookings = [...bookings];
+
+  if (searchTerm) {
+    const lowerSearch = searchTerm.toLowerCase();
+    displayedBookings = displayedBookings.filter(b => 
+      b.guestName?.toLowerCase().includes(lowerSearch)
+    );
+  }
+
+  if (sortConfig) {
+    displayedBookings.sort((a, b) => {
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+      
+      if (aVal instanceof Date) aVal = aVal.getTime();
+      if (bVal instanceof Date) bVal = bVal.getTime();
+      
+      if (aVal == null) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (bVal == null) return sortConfig.direction === 'asc' ? 1 : -1;
+
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const handleSort = (key: keyof ViewBooking) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortableHead = ({ label, sortKey, align = 'left' }: { label: string, sortKey: keyof ViewBooking, align?: 'left' | 'right' }) => {
+    const isActive = sortConfig?.key === sortKey;
+    return (
+      <TableHead 
+        className={`cursor-pointer group hover:bg-muted/50 transition-colors ${align === 'right' ? 'text-right' : ''}`} 
+        onClick={() => handleSort(sortKey)}
+      >
+        <div className={`flex items-center gap-1.5 text-nowrap select-none ${align === 'right' ? 'justify-end' : ''}`}>
+          {label}
+          {isActive ? (
+            sortConfig.direction === 'asc' ? 
+              <ArrowUp className="h-4 w-4 text-primary animate-in slide-in-from-bottom-2 fade-in duration-200" /> : 
+              <ArrowDown className="h-4 w-4 text-primary animate-in slide-in-from-top-2 fade-in duration-200" />
+          ) : (
+            <ArrowUpDown className="h-4 w-4 opacity-30 group-hover:opacity-100 transition-opacity" />
+          )}
+        </div>
+      </TableHead>
+    );
+  };
+
+  const statusColors: Record<string, string> = {
     Confirmed: 'bg-green-500 text-white',
     Reserved: 'bg-blue-500 text-white',
     Blocked: 'bg-muted text-muted-foreground',
@@ -147,20 +202,20 @@ export default function Bookings() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Guest</TableHead>
-                      <TableHead>Property</TableHead>
-                      <TableHead>Check-in</TableHead>
-                      <TableHead>Check-out</TableHead>
-                      <TableHead>Nights</TableHead>
-                      <TableHead>Platform</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
+                      <SortableHead label="Guest" sortKey="guestName" />
+                      <SortableHead label="Property" sortKey="propertyName" />
+                      <SortableHead label="Check-in" sortKey="checkIn" />
+                      <SortableHead label="Check-out" sortKey="checkOut" />
+                      <SortableHead label="Nights" sortKey="nights" />
+                      <SortableHead label="Platform" sortKey="platform" />
+                      <SortableHead label="Status" sortKey="reservationStatus" />
+                      <SortableHead label="Payment" sortKey="paymentStatus" />
+                      <SortableHead label="Amount" sortKey="totalAmount" align="right" />
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {bookings.map((booking) => (
+                    {displayedBookings.length > 0 ? displayedBookings.map((booking) => (
                       <TableRow key={booking.id} className="hover:bg-accent/50">
                         <TableCell className="font-medium">{booking.guestName}</TableCell>
                         <TableCell>{booking.propertyName}</TableCell>
@@ -194,7 +249,13 @@ export default function Bookings() {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                          {searchTerm ? `No bookings found matching "${searchTerm}".` : "No bookings found."}
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
