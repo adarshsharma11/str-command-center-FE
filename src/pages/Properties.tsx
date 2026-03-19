@@ -153,6 +153,10 @@ export default function Properties() {
       airbnb_id: data.airbnb_id || undefined,
       vrbo_id: data.vrbo_id || undefined,
       booking_id: data.booking_id || undefined,
+      new_owner_first_name: data.new_owner_first_name,
+      new_owner_last_name: data.new_owner_last_name,
+      new_owner_email: data.new_owner_email,
+      new_owner_password: data.new_owner_password,
     });
   };
 
@@ -232,12 +236,12 @@ export default function Properties() {
                   Add Property
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <form onSubmit={handleSubmit(onSubmit)}>
-                  <DialogHeader>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden">
+                  <DialogHeader className="px-6 py-4 border-b">
                     <DialogTitle>Add New Property</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
+                  <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Property Name</Label>
                       <Input 
@@ -437,7 +441,7 @@ export default function Properties() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-2 pt-4">
+                  <div className="flex justify-end gap-2 px-6 py-4 border-t">
                     <Button 
                       type="button"
                       variant="outline" 
