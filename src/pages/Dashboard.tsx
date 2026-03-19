@@ -21,7 +21,7 @@ import {
 } from '@/components/dashboard';
 import { KPI } from '@/types';
 
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -176,7 +176,11 @@ export default function Dashboard() {
 
         {/* Revenue Forecast + Payment Status Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RevenueForecastCard forecast={data.revenue_forecast} />
+          <RevenueForecastCard 
+            forecast={data.revenue_forecast} 
+            isCustomDate={dateFilter.preset === 'custom' || dateFilter.preset !== 'thisMonth'} 
+            customDaysCount={Math.max(1, differenceInDays(dateFilter.dateRange.to, dateFilter.dateRange.from))}
+          />
           <PaymentStatusCard payments={data.payment_collection} />
         </div>
 

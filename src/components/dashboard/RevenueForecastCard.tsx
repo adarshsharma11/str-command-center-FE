@@ -7,6 +7,8 @@ import { Line, LineChart, ResponsiveContainer } from 'recharts';
 
 interface RevenueForecastCardProps {
   forecast: RevenueForecastPeriod[];
+  isCustomDate?: boolean;
+  customDaysCount?: number;
 }
 
 const PERIOD_LABELS: Record<string, string> = {
@@ -15,7 +17,7 @@ const PERIOD_LABELS: Record<string, string> = {
   '90d': '90 Days',
 };
 
-export function RevenueForecastCard({ forecast }: RevenueForecastCardProps) {
+export function RevenueForecastCard({ forecast, isCustomDate = false, customDaysCount = 30 }: RevenueForecastCardProps) {
   // Create sparkline data from forecast
   const sparklineData = forecast.map((item) => ({
     value: item.confirmed_revenue + item.potential_revenue,
@@ -46,7 +48,7 @@ export function RevenueForecastCard({ forecast }: RevenueForecastCardProps) {
               {formatCurrency(shortTerm.confirmed_revenue)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {shortTerm.bookings_count} bookings in next 30 days
+              {shortTerm.bookings_count} bookings {isCustomDate ? `in ${customDaysCount} days` : 'in next 30 days'}
             </p>
             {shortTerm.potential_revenue > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
@@ -84,7 +86,7 @@ export function RevenueForecastCard({ forecast }: RevenueForecastCardProps) {
           {forecast.map((period) => (
             <div key={period.period} className="text-center">
               <div className="text-xs text-muted-foreground mb-1">
-                {PERIOD_LABELS[period.period]}
+                {isCustomDate && period.period === '30d' ? `${customDaysCount} Days` : PERIOD_LABELS[period.period] || period.period}
               </div>
               <div className="text-sm font-semibold">
                 {formatCompactCurrency(period.confirmed_revenue)}
