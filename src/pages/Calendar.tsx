@@ -217,7 +217,11 @@ export default function Calendar() {
 
   // Handle loading and error states
   if (isLoadingBookings || isLoadingProperties) {
-    return <CalendarPageSkeleton />;
+    return (
+      <Layout>
+        <CalendarPageSkeleton />
+      </Layout>
+    );
   }
 
   if (bookingsError || propertiesError) {
