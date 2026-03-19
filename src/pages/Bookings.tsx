@@ -6,10 +6,21 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Mail, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { useBookingsQuery, toViewBooking, type ViewBooking, useSendWelcomeMutation } from '@/lib/api/booking';
+import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Mail, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { useBookingsQuery, toViewBooking, type ViewBooking, useSendWelcomeMutation, useDeleteBookingMutation } from '@/lib/api/booking';
 import { BookingsPageSkeleton } from '@/components/skeletons/BookingsListSkeleton';
+import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +39,10 @@ export default function Bookings() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: keyof ViewBooking; direction: 'asc' | 'desc' } | null>(null);
-  
+
+  const queryClient = useQueryClient();
+  const [bookingToDelete, setBookingToDelete] = useState<{ id: string, name: string } | null>(null);
+
   const [selectedBooking, setSelectedBooking] = useState<ViewBooking | null>(null);
   const [guestEmail, setGuestEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
@@ -53,11 +67,11 @@ export default function Bookings() {
   });
 
   const handleOpenDetails = (booking: ViewBooking) => {
-     setSelectedBooking(booking);
-     setGuestEmail(booking.guestEmail || '');
-     setGuestPhone(booking.guestPhone || '');
-     setIsModalOpen(true);
-   };
+    setSelectedBooking(booking);
+    setGuestEmail(booking.guestEmail || '');
+    setGuestPhone(booking.guestPhone || '');
+    setIsModalOpen(true);
+  };
 
   const handleSendWelcome = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,19 +83,37 @@ export default function Bookings() {
       guest_phone: guestPhone || undefined,
     });
   };
-  
+
+  const deleteBookingMutation = useDeleteBookingMutation({
+    onSuccess: () => {
+      toast.success('Booking deleted successfully!');
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      setBookingToDelete(null);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete booking.');
+      setBookingToDelete(null);
+    }
+  });
+
+  const handleDeleteConfirm = () => {
+    if (bookingToDelete) {
+      deleteBookingMutation.mutate(bookingToDelete.id);
+    }
+  };
+
   const apiBookings = data?.data?.bookings ?? [];
   const totalItems = data?.data?.total ?? 0;
   // Fallback calculation for totalPages if the API doesn't provide it
   const totalPages = data?.data?.total_pages ?? (Math.ceil(totalItems / limit) || 1);
-  
+
   const bookings: ViewBooking[] = apiBookings.map(toViewBooking);
 
   let displayedBookings = [...bookings];
 
   if (searchTerm) {
     const lowerSearch = searchTerm.toLowerCase();
-    displayedBookings = displayedBookings.filter(b => 
+    displayedBookings = displayedBookings.filter(b =>
       b.guestName?.toLowerCase().includes(lowerSearch)
     );
   }
@@ -90,10 +122,10 @@ export default function Bookings() {
     displayedBookings.sort((a, b) => {
       let aVal = a[sortConfig.key];
       let bVal = b[sortConfig.key];
-      
+
       if (aVal instanceof Date) aVal = aVal.getTime();
       if (bVal instanceof Date) bVal = bVal.getTime();
-      
+
       if (aVal == null) return sortConfig.direction === 'asc' ? -1 : 1;
       if (bVal == null) return sortConfig.direction === 'asc' ? 1 : -1;
 
@@ -114,15 +146,15 @@ export default function Bookings() {
   const SortableHead = ({ label, sortKey, align = 'left' }: { label: string, sortKey: keyof ViewBooking, align?: 'left' | 'right' }) => {
     const isActive = sortConfig?.key === sortKey;
     return (
-      <TableHead 
-        className={`cursor-pointer group hover:bg-muted/50 transition-colors ${align === 'right' ? 'text-right' : ''}`} 
+      <TableHead
+        className={`cursor-pointer group hover:bg-muted/50 transition-colors ${align === 'right' ? 'text-right' : ''}`}
         onClick={() => handleSort(sortKey)}
       >
         <div className={`flex items-center gap-1.5 text-nowrap select-none ${align === 'right' ? 'justify-end' : ''}`}>
           {label}
           {isActive ? (
-            sortConfig.direction === 'asc' ? 
-              <ArrowUp className="h-4 w-4 text-primary animate-in slide-in-from-bottom-2 fade-in duration-200" /> : 
+            sortConfig.direction === 'asc' ?
+              <ArrowUp className="h-4 w-4 text-primary animate-in slide-in-from-bottom-2 fade-in duration-200" /> :
               <ArrowDown className="h-4 w-4 text-primary animate-in slide-in-from-top-2 fade-in duration-200" />
           ) : (
             <ArrowUpDown className="h-4 w-4 opacity-30 group-hover:opacity-100 transition-opacity" />
@@ -239,14 +271,25 @@ export default function Bookings() {
                           ${booking.totalAmount}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="bg-primary/5 hover:bg-primary hover:text-primary-foreground border-primary/20 transition-all duration-200"
-                            onClick={() => handleOpenDetails(booking)}
-                          >
-                            Details
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-primary/5 hover:bg-primary hover:text-primary-foreground border-primary/20 transition-all duration-200"
+                              onClick={() => handleOpenDetails(booking)}
+                            >
+                              Notify
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                              onClick={() => setBookingToDelete({ id: booking.id, name: booking.guestName })}
+                              disabled={deleteBookingMutation.isPending && bookingToDelete?.id === booking.id}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )) : (
@@ -350,8 +393,8 @@ export default function Bookings() {
               </div>
             </div>
             <DialogFooter>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={sendWelcome.isPending || (!guestEmail && !guestPhone)}
                 className="w-full sm:w-auto"
               >
@@ -371,6 +414,35 @@ export default function Bookings() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog
+        open={!!bookingToDelete}
+        onOpenChange={(open) => !open && !deleteBookingMutation.isPending && setBookingToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the booking for <strong>{bookingToDelete?.name}</strong> and remove its data from the system.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteBookingMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteConfirm();
+              }}
+              disabled={deleteBookingMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {deleteBookingMutation.isPending ? 'Deleting...' : 'Delete Booking'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }

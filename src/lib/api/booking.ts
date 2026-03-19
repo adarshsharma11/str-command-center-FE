@@ -280,3 +280,24 @@ export function useSendWelcomeMutation(options?: UseMutationOptions<SendWelcomeR
     ...options,
   });
 }
+
+// ============================================================
+// DELETE BOOKING HOOK
+// ============================================================
+export type DeleteBookingResponse = {
+  success: boolean;
+  message?: string;
+};
+
+async function deleteBooking(id: string | number): Promise<DeleteBookingResponse> {
+  const endpoint = ENDPOINTS.BOOKING.DELETE.replace(':id', id.toString());
+  return apiClient.delete<DeleteBookingResponse>(endpoint);
+}
+
+export function useDeleteBookingMutation(options?: UseMutationOptions<DeleteBookingResponse, Error, string | number>) {
+  return useMutation({
+    mutationKey: ['bookings', 'delete'],
+    mutationFn: (id: string | number) => deleteBooking(id),
+    ...options,
+  });
+}

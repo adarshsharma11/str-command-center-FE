@@ -9,6 +9,7 @@ export const ENDPOINTS = {
   BOOKING: {
     LIST: `${API_PREFIX}/bookings`,
     SEND_WELCOME: `${API_PREFIX}/bookings/send-welcome`,
+    DELETE: `${API_PREFIX}/bookings/:id`,
   },
   SERVICE_BOOKINGS: {
     CREATE: `${API_PREFIX}/service-bookings`,
