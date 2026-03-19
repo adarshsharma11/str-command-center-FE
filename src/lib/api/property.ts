@@ -153,7 +153,6 @@ export type CreatePropertyPayload = {
   new_owner_first_name?: string;
   new_owner_last_name?: string;
   new_owner_email?: string;
-  new_owner_password?: string;
 };
 
 type CreatePropertyResponse = {
@@ -214,13 +213,6 @@ export const createPropertySchema = yup.object({
     .when('owner_id', {
       is: (val: unknown) => (val as number | null) === -1,
       then: (schema) => schema.required('Email is required for new owner'),
-      otherwise: (schema) => schema.optional().nullable(),
-    }),
-  new_owner_password: yup.string()
-    .min(6, 'Password must be at least 6 characters')
-    .when('owner_id', {
-      is: (val: unknown) => (val as number | null) === -1,
-      then: (schema) => schema.required('Password is required for new owner'),
       otherwise: (schema) => schema.optional().nullable(),
     }),
   airbnb_id: yup.string()

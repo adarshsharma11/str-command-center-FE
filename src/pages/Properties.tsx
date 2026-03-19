@@ -37,7 +37,6 @@ type CreatePropertyFormData = {
   new_owner_first_name?: string;
   new_owner_last_name?: string;
   new_owner_email?: string;
-  new_owner_password?: string;
   airbnb_id?: string;
   vrbo_id?: string;
   booking_id?: string;
@@ -155,8 +154,7 @@ export default function Properties() {
       booking_id: data.booking_id || undefined,
       new_owner_first_name: data.new_owner_first_name,
       new_owner_last_name: data.new_owner_last_name,
-      new_owner_email: data.new_owner_email,
-      new_owner_password: data.new_owner_password,
+      new_owner_email: data.new_owner_email
     });
   };
 
@@ -376,22 +374,6 @@ export default function Properties() {
                           />
                           {errors.new_owner_email && (
                             <p className="text-sm text-destructive">{errors.new_owner_email.message}</p>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="new_owner_password">Temporary Password</Label>
-                          <Input 
-                            id="new_owner_password" 
-                            placeholder="Defaults to 123456" 
-                            defaultValue="123456"
-                            {...register('new_owner_password')}
-                            className={errors.new_owner_password ? 'border-destructive' : ''}
-                          />
-                          <p className="text-[10px] text-muted-foreground italic">
-                            The owner can change this password after their first login.
-                          </p>
-                          {errors.new_owner_password && (
-                            <p className="text-sm text-destructive">{errors.new_owner_password.message}</p>
                           )}
                         </div>
                       </div>
