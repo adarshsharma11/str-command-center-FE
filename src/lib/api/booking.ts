@@ -18,6 +18,7 @@ type BookingApiItem = {
   nights?: number;
   reservation_status?: string;
   payment_status?: string;
+  status?: string;
   total_amount?: number;
   property_id?: string;
   number_of_guests?: number;
@@ -95,8 +96,8 @@ export function toViewBooking(b: BookingApiItem): ViewBooking {
     checkOut,
     nights: typeof b.nights === 'number' ? b.nights : calculatedNights,
     platform: normalizePlatform(b.platform),
-    reservationStatus: b.reservation_status ?? 'Confirmed',
-    paymentStatus: (!b.total_amount) ? 'Pending' : (b.payment_status ?? 'Paid'),
+    reservationStatus: (b.reservation_status || b.status || 'Confirmed').charAt(0).toUpperCase() + (b.reservation_status || b.status || 'Confirmed').slice(1).toLowerCase(),
+    paymentStatus: b.payment_status || ((!b.total_amount) ? 'Pending' : 'Paid'),
     totalAmount: typeof b.total_amount === 'number' ? b.total_amount : 0,
   };
 }

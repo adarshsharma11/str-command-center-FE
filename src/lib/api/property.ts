@@ -75,31 +75,34 @@ function toPropertyListings(p: PropertyApiItem): PropertyListingView[] {
   // Check for actual platform IDs (not null or empty strings)
   if (p.airbnb_id && p.airbnb_id !== 'null' && p.airbnb_id.trim() !== '') {
     rows.push({
+      ...base,
       id: `${p.id}-airbnb`,
       platformName: 'Airbnb',
       platformListingId: p.airbnb_id,
       syncStatus: 'Synced' as const, // Show as connected when ID is present
-      ...base
+      trustScore: 100, // Fully connected
     });
   }
 
   if (p.vrbo_id && p.vrbo_id !== 'null' && p.vrbo_id.trim() !== '') {
     rows.push({
+      ...base,
       id: `${p.id}-vrbo`,
       platformName: 'Vrbo',
       platformListingId: p.vrbo_id,
       syncStatus: 'Synced' as const, // Show as connected when ID is present
-      ...base
+      trustScore: 100, // Fully connected
     });
   }
 
   if (p.booking_id && p.booking_id !== 'null' && p.booking_id.trim() !== '') {
     rows.push({
+      ...base,
       id: `${p.id}-booking`,
       platformName: 'Booking.com',
       platformListingId: p.booking_id,
       syncStatus: 'Synced' as const, // Show as connected when ID is present
-      ...base
+      trustScore: 100, // Fully connected
     });
   }
 
@@ -161,6 +164,34 @@ export function useCreatePropertyMutation(options?: MutationOptions<CreateProper
   return useMutation<CreatePropertyResponse, Error, CreatePropertyPayload>({
     mutationKey: ['properties', 'create'],
     mutationFn: (payload) => createProperty(payload),
+    ...options,
+  });
+}
+
+// Update Property
+export type UpdatePropertyPayload = {
+  id: string | number;
+  name?: string;
+  status?: 'active' | 'inactive' | 'maintenance';
+  address?: string;
+  airbnb_id?: string;
+  vrbo_id?: string;
+  booking_id?: string;
+  bedrooms?: number;
+  base_price?: number;
+  owner_id?: number | null;
+};
+
+async function updateProperty(payload: UpdatePropertyPayload): Promise<CreatePropertyResponse> {
+  const { id, ...data } = payload;
+  const endpoint = ENDPOINTS.PROPERTY.UPDATE.replace(':id', id.toString());
+  return apiClient.patch<CreatePropertyResponse>(endpoint, data);
+}
+
+export function useUpdatePropertyMutation(options?: MutationOptions<CreatePropertyResponse, Error, UpdatePropertyPayload>) {
+  return useMutation<CreatePropertyResponse, Error, UpdatePropertyPayload>({
+    mutationKey: ['properties', 'update'],
+    mutationFn: (payload) => updateProperty(payload),
     ...options,
   });
 }
