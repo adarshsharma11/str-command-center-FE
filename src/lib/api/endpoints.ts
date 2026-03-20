@@ -20,6 +20,7 @@ export const ENDPOINTS = {
   },
   PROPERTY: {
     LIST: `${API_PREFIX}/property`,
+    UPDATE: `${API_PREFIX}/property/:id`,
     DELETE: `${API_PREFIX}/property/:id`,
   },
   CATEGORIES: {

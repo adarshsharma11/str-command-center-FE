@@ -20,9 +20,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Link2, ExternalLink, Copy, Check, Trash2, BedDouble, DollarSign } from 'lucide-react';
+import { Plus, Link2, ExternalLink, Copy, Check, Trash2, BedDouble, DollarSign, Loader2 } from 'lucide-react';
 import { PropertiesPageSkeleton } from '@/components/skeletons/PropertiesListSkeleton';
-import { usePropertiesQuery, propertyMappers, useCreatePropertyMutation, useDeletePropertyMutation, createPropertySchema, type PropertyView, type PropertyListingView } from '@/lib/api/property';
+import { usePropertiesQuery, propertyMappers, useCreatePropertyMutation, useDeletePropertyMutation, useUpdatePropertyMutation, createPropertySchema, type PropertyView, type PropertyListingView, type UpdatePropertyPayload } from '@/lib/api/property';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { fetchOwners } from '@/lib/api/reports';
@@ -46,6 +46,9 @@ export default function Properties() {
   const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
   const [propertyToDelete, setPropertyToDelete] = useState<{id: string, name: string} | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isAddListingDialogOpen, setIsAddListingDialogOpen] = useState(false);
+  const [newListingPlatform, setNewListingPlatform] = useState<string>('');
+  const [newListingId, setNewListingId] = useState<string>('');
   const [copiedPropertyId, setCopiedPropertyId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -98,6 +101,39 @@ export default function Properties() {
       });
     },
   });
+
+  const updatePropertyMutation = useUpdatePropertyMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Property updated',
+        description: 'The listing connection has been added successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      setIsAddListingDialogOpen(false);
+      setNewListingPlatform('');
+      setNewListingId('');
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error updating property',
+        description: error.message || 'Failed to update property. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleAddListingConnection = () => {
+     if (!selectedProperty || !newListingPlatform || !newListingId) return;
+ 
+     const updateData: UpdatePropertyPayload = { 
+       id: selectedProperty,
+       airbnb_id: newListingPlatform === 'Airbnb' ? newListingId : undefined,
+       vrbo_id: newListingPlatform === 'Vrbo' ? newListingId : undefined,
+       booking_id: newListingPlatform === 'Booking.com' ? newListingId : undefined,
+     };
+ 
+     updatePropertyMutation.mutate(updateData);
+   };
 
   const deletePropertyMutation = useDeletePropertyMutation({
     onSuccess: () => {
@@ -601,7 +637,10 @@ export default function Properties() {
                             </div>
                           ))}
 
-                          <Button className="w-full gap-2">
+                          <Button 
+                            className="w-full gap-2"
+                            onClick={() => setIsAddListingDialogOpen(true)}
+                          >
                             <Plus className="h-4 w-4" />
                             Add New Listing Connection
                           </Button>
@@ -616,6 +655,66 @@ export default function Properties() {
           </div>
         </div>
       )}
+
+      {/* Add New Listing Connection Modal */}
+      <Dialog open={isAddListingDialogOpen} onOpenChange={setIsAddListingDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Listing Connection</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="platform">Platform</Label>
+              <Select value={newListingPlatform} onValueChange={setNewListingPlatform}>
+                <SelectTrigger id="platform">
+                  <SelectValue placeholder="Select platform" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(() => {
+                    const connectedPlatforms = selectedProperty 
+                      ? getPropertyListings(selectedProperty).map(l => l.platformName) 
+                      : [];
+                    return (
+                      <>
+                        <SelectItem value="Airbnb" disabled={connectedPlatforms.includes('Airbnb')}>Airbnb</SelectItem>
+                        <SelectItem value="Vrbo" disabled={connectedPlatforms.includes('Vrbo')}>Vrbo</SelectItem>
+                        <SelectItem value="Booking.com" disabled={connectedPlatforms.includes('Booking.com')}>Booking.com</SelectItem>
+                      </>
+                    );
+                  })()}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="listingId">Listing ID</Label>
+              <Input
+                id="listingId"
+                placeholder="Enter external listing ID"
+                value={newListingId}
+                onChange={(e) => setNewListingId(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsAddListingDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddListingConnection}
+              disabled={!newListingPlatform || !newListingId || updatePropertyMutation.isPending}
+            >
+              {updatePropertyMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                'Connect Listing'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Modal */}
       <AlertDialog 
