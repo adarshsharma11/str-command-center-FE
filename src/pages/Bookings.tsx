@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Mail, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Mail, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { useBookingsQuery, toViewBooking, type ViewBooking, useSendWelcomeMutation, useDeleteBookingMutation } from '@/lib/api/booking';
 import { BookingsPageSkeleton } from '@/components/skeletons/BookingsListSkeleton';
 import { useQueryClient } from '@tanstack/react-query';
@@ -219,8 +219,8 @@ export default function Bookings() {
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="Confirmed">Confirmed</SelectItem>
-                    <SelectItem value="Reserved">Reserved</SelectItem>
-                    <SelectItem value="Blocked">Blocked</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
