@@ -166,7 +166,10 @@ export default function Bookings() {
 
   const statusColors: Record<string, string> = {
     Confirmed: 'bg-green-500 text-white',
+    Cancelled: 'bg-destructive text-white',
     Reserved: 'bg-blue-500 text-white',
+    Pending: 'bg-yellow-500 text-white',
+    Failed: 'bg-destructive text-white',
     Blocked: 'bg-muted text-muted-foreground',
   };
 
@@ -174,6 +177,8 @@ export default function Bookings() {
     Paid: 'bg-green-500 text-white',
     Partial: 'bg-orange-500 text-white',
     Unpaid: 'bg-destructive text-destructive-foreground',
+    Failed: 'bg-destructive text-white',
+    Pending: 'bg-yellow-500 text-white',
   };
 
   return (
@@ -221,6 +226,7 @@ export default function Bookings() {
                     <SelectItem value="confirmed">Confirmed</SelectItem>
                     <SelectItem value="paid">Paid</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
