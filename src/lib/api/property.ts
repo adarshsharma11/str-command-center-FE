@@ -16,6 +16,11 @@ type PropertyApiItem = {
   ical_feed_url?: string;
   base_price?: number;
   bedrooms?: number;
+  owner?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
   owner_id?: number;
 };
 
@@ -36,6 +41,8 @@ export type PropertyView = {
   iCalUrl: string;
   basePrice: number;
   bedrooms: number;
+  ownerName?: string;
+  ownerEmail?: string;
 };
 
 export type PropertyListingView = {
@@ -59,6 +66,8 @@ function toViewProperty(p: PropertyApiItem): PropertyView {
     iCalUrl: p.ical_feed_url || '',
     basePrice: p.base_price || 0,
     bedrooms: p.bedrooms || 0,
+    ownerName: p.owner ? `${p.owner.first_name} ${p.owner.last_name}` : undefined,
+    ownerEmail: p.owner?.email,
   };
 }
 

@@ -20,7 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Link2, ExternalLink, Copy, Check, Trash2, BedDouble, DollarSign, Loader2 } from 'lucide-react';
+import { Plus, Link2, ExternalLink, Copy, Check, Trash2, BedDouble, DollarSign, Loader2, User, Mail } from 'lucide-react';
 import { PropertiesPageSkeleton } from '@/components/skeletons/PropertiesListSkeleton';
 import { usePropertiesQuery, propertyMappers, useCreatePropertyMutation, useDeletePropertyMutation, useUpdatePropertyMutation, createPropertySchema, type PropertyView, type PropertyListingView, type UpdatePropertyPayload } from '@/lib/api/property';
 import { useToast } from '@/components/ui/use-toast';
@@ -520,8 +520,28 @@ export default function Properties() {
                   </CardHeader>
                   <CardContent className="flex flex-col flex-1 space-y-4">
                     <div className="flex-1 space-y-4">
+                      {property.ownerName && (
+                        <div className="p-3 rounded-lg bg-accent/30 border border-accent/50 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                              <User className="h-4 w-4 text-primary" />
+                              <span className="truncate">{property.ownerName}</span>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] uppercase tracking-wider h-4 px-1.5 bg-background">
+                              Owner
+                            </Badge>
+                          </div>
+                          {property.ownerEmail && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground ml-6">
+                              <Mail className="h-3 w-3" />
+                              <span className="truncate">{property.ownerEmail}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div>
-                        <p className="text-xs text-muted-foreground mb-2">Connected Listings</p>
+                        <p className="text-xs text-muted-foreground mb-2 px-1">Connected Listings</p>
                         <div className="space-y-2">
                           {propertyListings.length > 0 ? (
                             propertyListings.map((listing) => (
