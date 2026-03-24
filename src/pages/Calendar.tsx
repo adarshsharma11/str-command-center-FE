@@ -19,7 +19,12 @@ import {
 } from '@/components/calendar/mockCalendarData';
 import { useCalendarBookingsQuery } from '@/lib/api/booking';
 import { usePropertiesQuery } from '@/lib/api/property';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useServiceCategoriesQuery } from '@/lib/api/service-category';
+import { apiClient } from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
+import { env } from '@/config/env';
+import { getToken } from '@/lib/auth/token';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 import { CalendarPageSkeleton } from '@/components/skeletons/CalendarSkeleton';
 
 export default function Calendar() {
@@ -36,17 +42,30 @@ export default function Calendar() {
   const [colorAssignments, setColorAssignments] = useState<ColorAssignment[]>(mockColorAssignments);
   const [selectedBooking, setSelectedBooking] = useState<CalendarBooking | null>(null);
   const [showAddEvent, setShowAddEvent] = useState(false);
+  
+  // Add Task Modal State
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+  const [taskType, setTaskType] = useState<string>('cleaning');
+  const [serviceId, setServiceId] = useState<string>('');
+  const [taskDate, setTaskDate] = useState<string>('');
+  const [taskTime, setTaskTime] = useState<string>('10:00');
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [taskLogs, setTaskLogs] = useState<string[]>([]);
 
   // Fetch bookings from API with larger limit for calendar view
   // Fetch for the full system to ensure metrics are accurate
   // Use a very large limit (10000) when in Year view, else 1000
-  const { data: bookingsData, isLoading: isLoadingBookings, error: bookingsError } = useCalendarBookingsQuery(
+  const { data: bookingsData, isLoading: isLoadingBookings, error: bookingsError, refetch: refetchBookings } = useCalendarBookingsQuery(
     1, 
     currentView === 'year' ? 10000 : 1000
   );
   
   // Fetch properties from API
   const { data: propertiesData, isLoading: isLoadingProperties, error: propertiesError } = usePropertiesQuery(1, 50);
+  
+  // Fetch service categories
+  const { data: serviceCategoriesData, isLoading: isLoadingServiceCategories } = useServiceCategoriesQuery();
+  const serviceCategories = serviceCategoriesData?.data || [];
   // Transform API bookings to calendar format
   const apiBookings = useMemo(() => {
     if (!bookingsData?.bookings) return [];
@@ -215,6 +234,86 @@ export default function Calendar() {
     setShowAddEvent(false);
   };
 
+  const handleOpenAddTask = useCallback((booking: CalendarBooking) => {
+    setSelectedBooking(booking);
+    setTaskDate(format(new Date(booking.checkOut), 'yyyy-MM-dd'));
+    setTaskType('cleaning');
+    setServiceId('');
+    setTaskLogs([]);
+    setIsAddTaskOpen(true);
+  }, []);
+
+  const handleSaveTask = async () => {
+    if (!selectedBooking) return;
+    
+    setIsAddingTask(true);
+    setTaskLogs(['Starting task creation process...']);
+    
+    try {
+      const token = getToken();
+      
+      const payload = {
+        reservation_id: selectedBooking.id,
+        type: taskType,
+        service_id: taskType === 'service' ? parseInt(serviceId) : undefined,
+        service_date: taskDate,
+        service_time: taskTime
+      };
+
+      const response = await fetch(`${env.apiBaseUrl}${ENDPOINTS.SERVICE_BOOKINGS.CREATE}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create task: ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Response body is not readable');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            setTaskLogs(prev => [...prev, data.message || `Step ${data.step} ${data.status}`]);
+            
+            if (data.step === 'complete' && data.status === 'success') {
+              toast.success('Task created successfully');
+              refetchBookings();
+              // Keep logs visible for a moment then close
+              setTimeout(() => {
+                setIsAddTaskOpen(false);
+                setIsAddingTask(false);
+              }, 2000);
+            }
+          } catch (e) {
+            console.error('Error parsing NDJSON:', e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error adding task:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add task');
+      setIsAddingTask(false);
+    }
+  };
+
   // Handle loading and error states
   if (isLoadingBookings || isLoadingProperties) {
     return (
@@ -321,9 +420,104 @@ export default function Calendar() {
             booking={selectedBooking}
             tasks={tasks}
             onClose={() => setSelectedBooking(null)}
+            onAddTask={handleOpenAddTask}
           />
         )}
       </div>
+
+      {/* Add Task Dialog */}
+      <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Task for {selectedBooking?.guestName}</DialogTitle>
+            <DialogDescription>
+              Schedule a cleaning or additional service for this booking.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Task Type</Label>
+              <Select value={taskType} onValueChange={setTaskType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cleaning">Cleaning Task</SelectItem>
+                  <SelectItem value="service">Additional Service</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {taskType === 'service' && (
+              <div className="space-y-2">
+                <Label>Service Category</Label>
+                <Select value={serviceId} onValueChange={setServiceId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={String(cat.id)}>
+                        {cat.category_name} {cat.price ? `- $${cat.price}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Input 
+                  type="date" 
+                  value={taskDate} 
+                  onChange={(e) => setTaskDate(e.target.value)} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Time</Label>
+                <Input 
+                  type="time" 
+                  value={taskTime} 
+                  onChange={(e) => setTaskTime(e.target.value)} 
+                />
+              </div>
+            </div>
+
+            {taskLogs.length > 0 && (
+              <div className="bg-muted p-3 rounded-md text-xs font-mono max-h-40 overflow-y-auto space-y-1">
+                {taskLogs.map((log, i) => (
+                  <div key={i} className="flex gap-2">
+                    <span className="text-muted-foreground">[{i+1}]</span>
+                    <span>{log}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddTaskOpen(false)} disabled={isAddingTask}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveTask} 
+              disabled={isAddingTask || (taskType === 'service' && !serviceId)}
+            >
+              {isAddingTask ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Add & Notify'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Event Dialog */}
       <Dialog open={showAddEvent} onOpenChange={setShowAddEvent}>
