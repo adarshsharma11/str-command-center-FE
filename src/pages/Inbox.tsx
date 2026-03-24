@@ -1,11 +1,11 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Layout } from '@/components/Layout';
 import { FolderSidebar } from '@/components/inbox/FolderSidebar';
 import { MasterThreadList } from '@/components/inbox/MasterThreadList';
 import { MessagePanel } from '@/components/inbox/MessagePanel';
 import { mockFolders } from '@/components/inbox/mockInboxData';
 import type { InboxFolder, InboxThread } from '@/components/inbox/types';
-import { useInboxQuery, mapInboxThreads, type InboxFilters } from '@/lib/api/emails';
+import { useInboxInfiniteQuery, mapInboxThreads, type InboxFilters } from '@/lib/api/emails';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
@@ -18,15 +18,72 @@ export default function Inbox() {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedThread, setSelectedThread] = useState<InboxThread | null>(null);
   const [filters, setFilters] = useState<InboxFilters>({ folder: 'BOTH', limit: 10, only_booking: false });
-  const { data: inboxResp, isLoading, error, refetch } = useInboxQuery(filters);
+  const {
+    data: inboxData,
+    isLoading,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInboxInfiniteQuery(filters);
   const queryClient = useQueryClient();
 
+  const threadListScrollRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
+
   useEffect(() => {
-    if (inboxResp) {
-      console.log('Inbox API Response:', inboxResp);
-      setThreads(mapInboxThreads(inboxResp));
+    setThreads([]);
+    setSelectedThread(null);
+  }, [filtersKey]);
+
+  useEffect(() => {
+    const pages = inboxData?.pages || [];
+
+    if (pages.length === 0) {
+      setThreads([]);
+      return;
     }
-  }, [inboxResp]);
+
+    const nextThreads = pages.flatMap(mapInboxThreads);
+    setThreads((prev) => {
+      const prevById = new Map(prev.map((t) => [t.id, t]));
+      return nextThreads.map((t) => {
+        const existing = prevById.get(t.id);
+        if (!existing) return t;
+        return {
+          ...t,
+          folderId: existing.folderId,
+          isStarred: existing.isStarred,
+          isRead: existing.isRead,
+          messages: existing.messages.length ? existing.messages : t.messages,
+        };
+      });
+    });
+  }, [inboxData]);
+
+  useEffect(() => {
+    const root = threadListScrollRef.current;
+    const target = loadMoreRef.current;
+    if (!root || !target) return;
+    if (!hasNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting) return;
+        if (isFetchingNextPage) return;
+        if (!hasNextPage) return;
+        fetchNextPage();
+      },
+      { root, rootMargin: '200px' }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, filtersKey]);
 
   const filteredThreads = useMemo(() => {
     if (!selectedFolderId) return threads;
@@ -180,21 +237,32 @@ export default function Inbox() {
               threadCounts={threadCounts}
               totalCount={threads.length}
             />
-            <div className="w-[420px] flex flex-col border-r border-border overflow-y-auto">
+            <div ref={threadListScrollRef} className="w-[420px] flex flex-col border-r border-border overflow-y-auto">
               <div className="px-4 py-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 sticky top-0 z-10">
                 <h1 className="text-lg font-semibold text-foreground">
                   {selectedFolderId ? folders.find(f => f.id === selectedFolderId)?.name : 'All Messages'}
                 </h1>
                 <p className="text-sm text-muted-foreground">{filteredThreads.length} conversations</p>
               </div>
-              <MasterThreadList
-                threads={filteredThreads}
-                folders={folders}
-                selectedThreadId={selectedThread?.id || null}
-                onThreadClick={handleThreadClick}
-                onStarToggle={handleStarToggle}
-                onMoveToFolder={handleMoveToFolder}
-              />
+              <div className="flex-1">
+                <MasterThreadList
+                  threads={filteredThreads}
+                  folders={folders}
+                  selectedThreadId={selectedThread?.id || null}
+                  onThreadClick={handleThreadClick}
+                  onStarToggle={handleStarToggle}
+                  onMoveToFolder={handleMoveToFolder}
+                />
+                <div ref={loadMoreRef} className="py-4 flex items-center justify-center text-sm text-muted-foreground">
+                  {isFetchingNextPage ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : hasNextPage ? (
+                    <span>Scroll to load more</span>
+                  ) : threads.length > 0 ? (
+                    <span>End of list</span>
+                  ) : null}
+                </div>
+              </div>
             </div>
             <div className="flex-1 flex">
               <MessagePanel

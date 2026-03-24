@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Zap, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Plus, Zap } from 'lucide-react';
 import { useActivityRulesQuery, useUpdateActivityRuleStatusMutation, useAutomationLogsQuery, type ActivityRule } from '@/lib/api/activity-rules';
 import { ActivityRuleDialog } from '@/components/automation/ActivityRuleDialog';
 import { useToast } from '@/hooks/use-toast';
@@ -16,7 +16,9 @@ import { format } from 'date-fns';
 
 export default function Automation() {
   const { data: rulesData, isLoading, error } = useActivityRulesQuery();
-  const { data: logsData, isLoading: isLoadingLogs } = useAutomationLogsQuery();
+  const [logsPage, setLogsPage] = useState(1);
+  const logsLimit = 10;
+  const { data: logsData, isLoading: isLoadingLogs, error: logsError } = useAutomationLogsQuery(logsPage, logsLimit);
   const updateStatusMutation = useUpdateActivityRuleStatusMutation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -24,8 +26,17 @@ export default function Automation() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [ruleToEdit, setRuleToEdit] = useState<ActivityRule | null>(null);
 
-  // Use real logs if available, otherwise fallback to mock (or just use real)
-  const logs = logsData?.data || [];
+  const logs = (() => {
+    const candidate = logsData?.data?.logs;
+    return Array.isArray(candidate) ? candidate : [];
+  })();
+  const logsPagination = logsData?.data?.pagination;
+  const logsTotalPages = Math.max(1, logsPagination?.total_pages ?? 1);
+  const logsTotalItems = Math.max(0, logsPagination?.total ?? 0);
+
+  useEffect(() => {
+    if (logsPage > logsTotalPages) setLogsPage(logsTotalPages);
+  }, [logsPage, logsTotalPages]);
 
   const handleCreateRule = () => {
     setRuleToEdit(null);
@@ -169,15 +180,61 @@ export default function Automation() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                 {logs.map((log, index) => (
+                {isLoadingLogs ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-muted-foreground">
+                      Loading logs...
+                    </TableCell>
+                  </TableRow>
+                ) : logsError ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-muted-foreground">
+                      Error loading logs: {logsError.message}
+                    </TableCell>
+                  </TableRow>
+                ) : logs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-muted-foreground">
+                      No logs yet.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  logs.map((log, index) => (
                     <TableRow key={index}>
-                        <TableCell>{log.created_at}</TableCell>
-                        <TableCell>{log.rule_name}</TableCell>
-                        <TableCell>{log.outcome}</TableCell>
+                      <TableCell>{log.created_at}</TableCell>
+                      <TableCell>{log.rule_name}</TableCell>
+                      <TableCell>{log.outcome}</TableCell>
                     </TableRow>
-                 ))}
+                  ))
+                )}
               </TableBody>
             </Table>
+
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {logsTotalItems === 0 ? 0 : (logsPage - 1) * logsLimit + 1} to {Math.min(logsPage * logsLimit, logsTotalItems)} of {logsTotalItems} entries
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLogsPage((p) => Math.max(1, p - 1))}
+                  disabled={isLoadingLogs || logsPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLogsPage((p) => Math.min(logsTotalPages, p + 1))}
+                  disabled={isLoadingLogs || logsPage === logsTotalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
