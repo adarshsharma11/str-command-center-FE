@@ -21,6 +21,7 @@ interface CalendarSidePanelProps {
   booking: CalendarBooking | null;
   tasks: VendorTask[];
   onClose: () => void;
+  onAddTask?: (booking: CalendarBooking) => void;
 }
 
 const channelLabels: Record<string, string> = {
@@ -36,7 +37,7 @@ const statusColors: Record<string, string> = {
   blocked: '#6B7280',
 };
 
-export function CalendarSidePanel({ booking, tasks, onClose }: CalendarSidePanelProps) {
+export function CalendarSidePanel({ booking, tasks, onClose, onAddTask }: CalendarSidePanelProps) {
   if (!booking) return null;
 
   const nights = differenceInDays(booking.checkOut, booking.checkIn);
@@ -209,7 +210,12 @@ export function CalendarSidePanel({ booking, tasks, onClose }: CalendarSidePanel
               <p className="text-sm text-muted-foreground">No tasks scheduled</p>
             )}
 
-            <Button variant="outline" size="sm" className="w-full">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full"
+              onClick={() => onAddTask?.(booking)}
+            >
               + Add Task
             </Button>
           </div>
