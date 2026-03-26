@@ -169,10 +169,10 @@ export function CalendarHeader({
         </div>
 
         {/* Add Event Button */}
-        <Button onClick={onAddEvent} className="gap-2">
+        {/* <Button onClick={onAddEvent} className="gap-2">
           <Plus size={16} />
           Add Event
-        </Button>
+        </Button> */}
       </div>
     </div>
   );
