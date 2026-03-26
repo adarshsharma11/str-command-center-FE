@@ -52,7 +52,15 @@ export type AutomationLog = {
 export type AutomationLogsResponse = {
   success: boolean;
   message: string;
-  data: AutomationLog[];
+  data: {
+    logs: AutomationLog[];
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      total_pages: number;
+    };
+  };
 };
 
 // --- API Functions ---
@@ -61,8 +69,12 @@ export async function fetchActivityRules(): Promise<ActivityRuleListResponse> {
   return apiClient.get<ActivityRuleListResponse>(ENDPOINTS.ACTIVITY_RULES.LIST);
 }
 
-export async function fetchAutomationLogs(): Promise<AutomationLogsResponse> {
-  return apiClient.get<AutomationLogsResponse>(ENDPOINTS.ACTIVITY_RULES.LOGS);
+export async function fetchAutomationLogs(page: number = 1, limit: number = 10): Promise<AutomationLogsResponse> {
+  const params = new URLSearchParams({ 
+    page: String(page), 
+    limit: String(limit) 
+  });
+  return apiClient.get<AutomationLogsResponse>(`${ENDPOINTS.ACTIVITY_RULES.LOGS}?${params.toString()}`);
 }
 
 export async function fetchActivityRule(id: number): Promise<ActivityRuleResponse> {
@@ -95,10 +107,10 @@ export function useActivityRulesQuery(options?: UseQueryOptions<ActivityRuleList
   });
 }
 
-export function useAutomationLogsQuery(options?: UseQueryOptions<AutomationLogsResponse, Error>) {
+export function useAutomationLogsQuery(page: number = 1, limit: number = 10, options?: UseQueryOptions<AutomationLogsResponse, Error>) {
   return useQuery<AutomationLogsResponse, Error>({
-    queryKey: ['automation-logs'],
-    queryFn: () => fetchAutomationLogs(),
+    queryKey: ['automation-logs', page, limit],
+    queryFn: () => fetchAutomationLogs(page, limit),
     staleTime: 30_000,
     ...options,
   });

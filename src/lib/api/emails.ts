@@ -1,4 +1,4 @@
-import { useQuery, useMutation, type QueryOptions, type MutationOptions } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useMutation, type InfiniteData, type QueryOptions, type MutationOptions, type UseInfiniteQueryOptions } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { InboxMessage, InboxThread } from '@/components/inbox/types';
@@ -155,6 +155,7 @@ export type InboxFilters = {
   q?: string;
   platform?: 'airbnb' | 'vrbo' | 'booking' | 'plumguide';
   since_days?: number;
+  page?: number;
   limit?: number;
   only_booking?: boolean;
 };
@@ -170,6 +171,7 @@ async function fetchInboxWithFilters(filters?: InboxFilters): Promise<InboxRespo
   if (filters?.q) params.set('q', filters.q);
   if (filters?.platform) params.set('platform', filters.platform);
   if (typeof filters?.since_days === 'number') params.set('since_days', String(filters.since_days));
+  if (typeof filters?.page === 'number') params.set('page', String(filters.page));
   if (typeof filters?.limit === 'number') params.set('limit', String(filters.limit));
   // if (typeof filters?.only_booking === 'boolean') params.set('only_booking', String(filters.only_booking));
   
@@ -181,6 +183,47 @@ export function useInboxQuery(filters?: InboxFilters, options?: QueryOptions<Inb
   return useQuery<InboxResponse>({
     queryKey: ['emails', 'inbox', filters],
     queryFn: () => fetchInboxWithFilters(filters),
+    staleTime: 30_000,
+    ...options,
+  });
+}
+
+function unwrapInbox(resp: InboxResponse): { emails: EmailItem[]; page?: number; limit?: number; total?: number } {
+  if (Array.isArray(resp)) return { emails: resp };
+  return {
+    emails: resp?.data?.emails || [],
+    page: resp?.data?.page,
+    limit: resp?.data?.limit,
+    total: resp?.data?.total,
+  };
+}
+
+type InboxInfiniteQueryOptions = Omit<
+  UseInfiniteQueryOptions<InboxResponse, Error, InfiniteData<InboxResponse, number>, readonly unknown[], number>,
+  'queryKey' | 'queryFn' | 'initialPageParam' | 'getNextPageParam'
+>;
+
+export function useInboxInfiniteQuery(filters?: InboxFilters, options?: InboxInfiniteQueryOptions) {
+  const limit = filters?.limit ?? 10;
+
+  return useInfiniteQuery<InboxResponse, Error, InfiniteData<InboxResponse, number>, readonly unknown[], number>({
+    queryKey: ['emails', 'inbox-infinite', { ...filters, limit }],
+    queryFn: ({ pageParam = 1 }) => fetchInboxWithFilters({ ...filters, page: pageParam as number, limit }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const { emails, page, limit: respLimit, total } = unwrapInbox(lastPage);
+      if (emails.length === 0) return undefined;
+
+      const effectiveLimit = respLimit ?? limit;
+      const currentPage = page ?? allPages.length;
+
+      if (typeof total === 'number') {
+        const loaded = currentPage * effectiveLimit;
+        return loaded >= total ? undefined : currentPage + 1;
+      }
+
+      return emails.length < effectiveLimit ? undefined : currentPage + 1;
+    },
     staleTime: 30_000,
     ...options,
   });
